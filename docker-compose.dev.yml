@@ -1,0 +1,64 @@
+# Entorno de desarrollo local: la app entera sin tocar Azure.
+#
+#   docker compose -f docker-compose.dev.yml up
+#
+#   API       http://localhost:8000/docs
+#   SQL       localhost,1433   (sa / Obra493$Local)
+#   Blobs     http://localhost:10000  (Azurite)
+#
+# La diferencia con prod: SQL Server 2022 Developer en vez de Azure SQL.
+# Mismo dialecto T-SQL, misma sintaxis, cero costo. Lo unico que no
+# reproduce es el auto-pause — y eso es justamente lo que hay que probar
+# igual en Azure antes de confiarse.
+
+services:
+
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: obra493-sql-dev
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Obra493$Local"
+      MSSQL_PID: "Developer"          # gratis para desarrollo
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: obra493-blobs-dev
+    command: azurite-blob --blobHost 0.0.0.0 --loose
+    ports:
+      - "10000:10000"
+    volumes:
+      - blobdata:/data
+
+  api:
+    build:
+      context: ./backend
+    container_name: obra493-api-dev
+    depends_on:
+      sql:
+        condition: service_healthy
+    environment:
+      SQL_CONNECTION_STRING: "Server=tcp:sql,1433;Database=master;User ID=sa;Password=Obra493$Local;Encrypt=false;"
+      CORS_ORIGINS: "http://localhost:5173"
+      STORAGE_ACCOUNT: "devstoreaccount1"
+      STORAGE_CONTAINER: "documentos"
+    ports:
+      - "8000:80"
+    volumes:
+      # hot reload: editas y el contenedor toma el cambio sin rebuild
+      - ./backend/app:/app/app:ro
+    command: ["uvicorn","app.main:app","--host","0.0.0.0","--port","80","--reload"]
+
+volumes:
+  sqldata:
+  blobdata:

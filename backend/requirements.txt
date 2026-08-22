@@ -1,0 +1,7 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pymssql==2.3.2
+httpx==0.28.1
+pydantic==2.10.4
+python-dateutil==2.9.0.post0
+# openpyxl solo cuando se implemente el importador de Excel (fase 4)
