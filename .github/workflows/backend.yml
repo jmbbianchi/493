@@ -55,9 +55,12 @@ jobs:
           inlineScript: |
             az containerapp update -g $RG -n $APP \
               --image ${{ env.IMAGE }}:${{ github.sha }}
+            # --args va separado por ESPACIOS, no por comas:
+            # "-m","app.jobs.indices" llega como un solo argumento y falla.
             az containerapp job update -g $RG -n $JOB \
               --image ${{ env.IMAGE }}:${{ github.sha }} \
-              --command "python" --args "-m","app.jobs.indices"
+              --command "python" \
+              --args "-m" "app.jobs.indices"
 
       - name: URL
         uses: azure/cli@v2
