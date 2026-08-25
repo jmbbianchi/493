@@ -296,6 +296,12 @@ else {
 }
 az containerapp job secret set -g $RG -n $JOB --secrets "sql-conn=$CONNSTR" -o none
 $global:LASTEXITCODE = 0
+# El secret por si solo no alcanza: hay que mapearlo a la variable de entorno
+# que lee app/db.py, o el job muere con KeyError SQL_CONNECTION_STRING.
+az containerapp job update -g $RG -n $JOB `
+   --set-env-vars "SQL_CONNECTION_STRING=secretref:sql-conn" -o none
+Requiere "mapear el secret a la variable de entorno del job"
+Ok "SQL_CONNECTION_STRING del job"
 
 # ------------------------------------------------- 8. static web app
 Step 8 "Static Web App (plan Free)"
