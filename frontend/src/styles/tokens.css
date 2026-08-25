@@ -1,0 +1,128 @@
+/* ============================================================
+   obra493 - sistema de tokens "Obra"
+   Direccion visual elegida el 25-ago-2026.
+
+   Cruce de las dos direcciones que estaban en juego:
+     - de Legajo: la densidad y las columnas regladas de una planilla
+     - de Pizarra: las superficies delimitadas y los chips de estado
+
+   Reglas de la direccion, por si alguien duda mas adelante:
+     1. Los bordes hacen el trabajo, no las sombras. Una sola sombra
+        minima existe y es para menus flotantes.
+     2. Radio 4 px. Nada mas redondo, nada cuadrado del todo.
+     3. Un solo acento: el azul tinta. El color semantico (ok / atencion
+        / problema) es aparte y NO se usa para decorar.
+     4. Todo numero lleva .ob-num: cifras tabulares y cero sin barra.
+     5. Densidad alta: fila de 30 px. Si una pantalla necesita mas aire,
+        se sube el padding de esa pantalla, no el token global.
+   ============================================================ */
+
+:root {
+  /* ---------- superficie y tinta ---------- */
+  --ob-bg:            #F7F9FA;   /* fondo de la aplicacion */
+  --ob-surface:       #FFFFFF;   /* tablas, tarjetas, barras */
+  --ob-surface-2:     #F1F5F7;   /* hover de fila, zebra, encabezado fijo */
+  --ob-ink:           #111A21;   /* texto principal */
+  --ob-ink-2:         #4B5A66;   /* texto secundario, unidades */
+  --ob-ink-3:         #84929E;   /* rotulos, placeholders, canaleta */
+  --ob-line:          #E3E9ED;   /* reglas de tabla y bordes normales */
+  --ob-line-strong:   #C9D4DB;   /* separadores de encabezado y totales */
+
+  /* ---------- acento (uno solo) ---------- */
+  --ob-accent:        #1B3A5C;
+  --ob-accent-ink:    #FFFFFF;   /* texto sobre el acento */
+  --ob-accent-soft:   #E7EEF5;   /* fondo de seleccion y pestania activa */
+
+  /* ---------- semantico (nunca decorativo) ---------- */
+  --ob-ok:            #186B47;   --ob-ok-soft:   #E4F1EA;
+  --ob-warn:          #8A5A0B;   --ob-warn-soft: #F6EEDF;
+  --ob-bad:           #A32B21;   --ob-bad-soft:  #F7E7E5;
+
+  /* Dinero que se movio: sube = malo, baja = bueno. Al reves de una
+     bolsa de valores, porque aca lo que sube es tu costo. */
+  --ob-sube:          var(--ob-bad);
+  --ob-baja:          var(--ob-ok);
+
+  /* ---------- tipografia ---------- */
+  --ob-font: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+
+  --ob-fs-2xs: 0.6875rem;  /* 11 - rotulos de columna, chips */
+  --ob-fs-xs:  0.75rem;    /* 12 - unidades, metadatos */
+  --ob-fs-sm:  0.8125rem;  /* 13 - celdas de tabla, texto de UI */
+  --ob-fs-md:  0.875rem;   /* 14 - texto por defecto */
+  --ob-fs-lg:  1rem;       /* 16 - totales, titulos de panel */
+  --ob-fs-xl:  1.125rem;   /* 18 - titulo de pantalla */
+  --ob-fs-2xl: 1.375rem;   /* 22 - titulo de obra */
+
+  --ob-fw-normal: 400;
+  --ob-fw-medium: 500;
+  --ob-fw-semi:   600;
+  --ob-fw-bold:   700;
+
+  --ob-lh-tight:  1.2;
+  --ob-lh-normal: 1.45;
+  --ob-lh-prose:  1.6;
+
+  /* Rotulo: mayusculas espaciadas. Es lo que le da el aire tecnico
+     a la interfaz sin necesidad de una monoespaciada. */
+  --ob-label-size:    var(--ob-fs-2xs);
+  --ob-label-ls:      0.09em;
+  --ob-label-weight:  var(--ob-fw-semi);
+
+  /* ---------- densidad ---------- */
+  --ob-row-h:    30px;
+  --ob-cell-py:  0.40rem;
+  --ob-cell-px:  0.65rem;
+
+  --ob-gap-1: 0.25rem;
+  --ob-gap-2: 0.5rem;
+  --ob-gap-3: 0.75rem;
+  --ob-gap-4: 1rem;
+  --ob-gap-5: 1.5rem;
+  --ob-gap-6: 2rem;
+
+  /* ---------- forma ---------- */
+  --ob-radius:    4px;
+  --ob-radius-sm: 3px;
+  --ob-radius-pill: 999px;
+  --ob-border:  1px solid var(--ob-line);
+
+  /* Unica sombra del sistema, y solo para lo que flota. */
+  --ob-shadow-pop: 0 4px 16px -6px rgba(17, 26, 33, 0.28);
+
+  /* ---------- interaccion ---------- */
+  --ob-focus:     2px solid var(--ob-accent);
+  --ob-focus-off: 2px;
+  --ob-t-fast:    120ms ease;
+
+  color-scheme: light;
+}
+
+/* ============================================================
+   Modo oscuro: por ahora es opt-in con data-theme="dark" en <html>.
+   NO se engancha a prefers-color-scheme todavia: la direccion Obra
+   se diseño en claro y el oscuro necesita su propia pasada de
+   contraste antes de soltarlo por defecto.
+   ============================================================ */
+:root[data-theme="dark"] {
+  --ob-bg:          #0E1519;
+  --ob-surface:     #141D24;
+  --ob-surface-2:   #1A242C;
+  --ob-ink:         #E4EBF0;
+  --ob-ink-2:       #A2B1BC;
+  --ob-ink-3:       #7B8A96;
+  --ob-line:        #23303A;
+  --ob-line-strong: #33434F;
+
+  --ob-accent:      #7FB3DD;
+  --ob-accent-ink:  #08131F;
+  --ob-accent-soft: #16283A;
+
+  --ob-ok:   #58BE8C;  --ob-ok-soft:  #12271E;
+  --ob-warn: #D7A24A;  --ob-warn-soft: #2A2214;
+  --ob-bad:  #E37B70;  --ob-bad-soft:  #2C1917;
+
+  --ob-shadow-pop: 0 4px 16px -6px rgba(0, 0, 0, 0.65);
+
+  color-scheme: dark;
+}

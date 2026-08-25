@@ -1,0 +1,200 @@
+/* ============================================================
+   obra493 - capa base de la direccion "Obra"
+   Primitivas minimas para armar pantallas. Todo sale de tokens.css:
+   si necesitas un color o un tamanio nuevo, se agrega alla, no aca.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ob-bg);
+  color: var(--ob-ink);
+  font-family: var(--ob-font);
+  font-size: var(--ob-fs-md);
+  line-height: var(--ob-lh-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cifras tabulares y cero sin barra. Va en TODA celda con numeros:
+   sin esto las columnas de plata no se pueden comparar de un vistazo. */
+.ob-num {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "zero" 0;
+  text-align: right;
+}
+
+.ob-label {
+  font-size: var(--ob-label-size);
+  letter-spacing: var(--ob-label-ls);
+  font-weight: var(--ob-label-weight);
+  text-transform: uppercase;
+  color: var(--ob-ink-3);
+}
+
+:focus-visible {
+  outline: var(--ob-focus);
+  outline-offset: var(--ob-focus-off);
+}
+
+/* ---------- superficies ---------- */
+.ob-card {
+  background: var(--ob-surface);
+  border: var(--ob-border);
+  border-radius: var(--ob-radius);
+}
+
+/* ---------- barra superior ---------- */
+.ob-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-gap-4);
+  padding: var(--ob-gap-3) var(--ob-gap-4);
+  background: var(--ob-surface);
+  border-bottom: var(--ob-border);
+}
+.ob-topbar__marca { font-weight: var(--ob-fw-bold); letter-spacing: -0.01em; }
+.ob-topbar__ruta  { color: var(--ob-ink-2); font-size: var(--ob-fs-xs); }
+.ob-topbar__fx    { margin-left: auto; color: var(--ob-ink-2); font-size: var(--ob-fs-xs); }
+
+/* ---------- pestanias de seccion ---------- */
+.ob-tabs { display: flex; gap: var(--ob-gap-5); padding: 0 var(--ob-gap-4);
+           background: var(--ob-surface); border-bottom: var(--ob-border); }
+.ob-tabs__item {
+  padding: var(--ob-gap-2) 0;
+  font-size: var(--ob-fs-sm);
+  color: var(--ob-ink-3);
+  border-bottom: 2px solid transparent;
+  background: none; border-top: 0; border-left: 0; border-right: 0;
+  font-family: inherit; cursor: pointer;
+  transition: color var(--ob-t-fast);
+}
+.ob-tabs__item:hover { color: var(--ob-ink-2); }
+.ob-tabs__item[aria-current="page"] {
+  color: var(--ob-ink);
+  font-weight: var(--ob-fw-semi);
+  border-bottom-color: var(--ob-accent);
+}
+
+/* ---------- barra de filtros ---------- */
+.ob-toolbar { display: flex; align-items: center; gap: var(--ob-gap-1);
+              padding: var(--ob-gap-3) var(--ob-gap-4); border-bottom: var(--ob-border); }
+.ob-toolbar__meta { margin-left: auto; font-size: var(--ob-fs-xs); color: var(--ob-ink-3); }
+
+.ob-pill {
+  font-size: var(--ob-fs-xs);
+  padding: 0.16rem 0.5rem;
+  border: var(--ob-border);
+  border-radius: var(--ob-radius-sm);
+  background: var(--ob-surface);
+  color: var(--ob-ink-2);
+  font-family: inherit; cursor: pointer;
+  transition: border-color var(--ob-t-fast), color var(--ob-t-fast);
+}
+.ob-pill:hover { border-color: var(--ob-line-strong); }
+.ob-pill[aria-pressed="true"] {
+  border-color: var(--ob-accent); color: var(--ob-accent);
+  background: var(--ob-accent-soft); font-weight: var(--ob-fw-semi);
+}
+
+/* ---------- tabla: el componente central de la app ---------- */
+.ob-tablewrap {
+  margin: var(--ob-gap-4);
+  background: var(--ob-surface);
+  border: var(--ob-border);
+  border-radius: var(--ob-radius);
+  overflow: auto;
+}
+.ob-table { border-collapse: collapse; width: 100%; font-size: var(--ob-fs-sm); }
+
+.ob-table th {
+  font-size: var(--ob-label-size);
+  letter-spacing: var(--ob-label-ls);
+  text-transform: uppercase;
+  font-weight: var(--ob-label-weight);
+  color: var(--ob-ink-3);
+  text-align: left;
+  padding: var(--ob-cell-py) var(--ob-cell-px);
+  border-bottom: 1px solid var(--ob-line-strong);
+  background: var(--ob-surface);
+  position: sticky; top: 0; z-index: 1;
+}
+.ob-table td {
+  padding: var(--ob-cell-py) var(--ob-cell-px);
+  border-bottom: 1px solid var(--ob-line);
+  vertical-align: baseline;
+  height: var(--ob-row-h);
+}
+/* Columnas regladas: lo que hereda de la planilla de computo. */
+.ob-table th, .ob-table td { border-right: 1px solid var(--ob-line); }
+.ob-table th:last-child, .ob-table td:last-child { border-right: none; }
+
+.ob-table tbody tr:hover td { background: var(--ob-surface-2); }
+
+.ob-table__gutter {
+  width: 2rem; text-align: right;
+  font-size: var(--ob-fs-2xs); color: var(--ob-ink-3);
+}
+.ob-table__sec    { color: var(--ob-ink-3); }
+.ob-table__strong { font-weight: var(--ob-fw-semi); }
+
+.ob-table tfoot td {
+  border-bottom: none;
+  border-top: 2px solid var(--ob-line-strong);
+  padding-top: var(--ob-gap-2);
+  color: var(--ob-ink-2);
+}
+.ob-table tfoot .ob-total { font-size: var(--ob-fs-lg); font-weight: var(--ob-fw-semi); color: var(--ob-ink); }
+
+/* ---------- chips de estado ---------- */
+.ob-chip {
+  display: inline-block;
+  font-size: var(--ob-fs-2xs);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: var(--ob-fw-semi);
+  padding: 0.12rem 0.38rem;
+  border-radius: var(--ob-radius-sm);
+  white-space: nowrap;
+}
+.ob-chip--ok   { color: var(--ob-ok);     background: var(--ob-ok-soft); }
+.ob-chip--warn { color: var(--ob-warn);   background: var(--ob-warn-soft); }
+.ob-chip--bad  { color: var(--ob-bad);    background: var(--ob-bad-soft); }
+.ob-chip--mudo { color: var(--ob-ink-3);  background: var(--ob-surface-2); }
+
+/* ---------- variacion de precio ---------- */
+.ob-delta--sube { color: var(--ob-sube); }
+.ob-delta--baja { color: var(--ob-baja); }
+
+/* ---------- botones ---------- */
+.ob-btn {
+  font-family: inherit; font-size: var(--ob-fs-sm); font-weight: var(--ob-fw-medium);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--ob-radius-sm);
+  border: 1px solid var(--ob-line-strong);
+  background: var(--ob-surface); color: var(--ob-ink);
+  cursor: pointer;
+  transition: border-color var(--ob-t-fast), background var(--ob-t-fast);
+}
+.ob-btn:hover { background: var(--ob-surface-2); }
+.ob-btn--primario {
+  background: var(--ob-accent); color: var(--ob-accent-ink); border-color: var(--ob-accent);
+}
+.ob-btn--primario:hover { filter: brightness(1.12); background: var(--ob-accent); }
+
+/* ---------- campos ---------- */
+.ob-input {
+  font-family: inherit; font-size: var(--ob-fs-sm);
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--ob-line-strong);
+  border-radius: var(--ob-radius-sm);
+  background: var(--ob-surface); color: var(--ob-ink);
+}
+.ob-input::placeholder { color: var(--ob-ink-3); }
+.ob-input:focus-visible { border-color: var(--ob-accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
