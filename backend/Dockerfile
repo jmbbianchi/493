@@ -19,6 +19,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+# Lanzador del job: ver el comentario adentro (el az CLI no acepta "-m").
+COPY run_indices.py .
 
 # Usuario sin privilegios
 RUN useradd -r -u 1001 appuser && chown -R appuser /app
