@@ -22,11 +22,13 @@ COPY app ./app
 # Lanzador del job: ver el comentario adentro (el az CLI no acepta "-m").
 COPY run_indices.py .
 
-# Usuario sin privilegios
+# Usuario sin privilegios. OJO: por esto el puerto tiene que ser >= 1024.
+# Con USER appuser, uvicorn en el 80 muere con:
+#   [Errno 13] error while attempting to bind on address ('0.0.0.0', 80)
 RUN useradd -r -u 1001 appuser && chown -R appuser /app
 USER appuser
 
-EXPOSE 80
+EXPOSE 8080
 # 1 worker: con un usuario no hace falta mas, y multiples workers
 # multiplican las conexiones abiertas contra SQL (ver nota de auto-pause).
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--workers", "1"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

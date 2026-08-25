@@ -53,11 +53,11 @@ services:
       STORAGE_ACCOUNT: "devstoreaccount1"
       STORAGE_CONTAINER: "documentos"
     ports:
-      - "8000:80"
+      - "8000:8080"
     volumes:
       # hot reload: editas y el contenedor toma el cambio sin rebuild
       - ./backend/app:/app/app:ro
-    command: ["uvicorn","app.main:app","--host","0.0.0.0","--port","80","--reload"]
+    command: ["uvicorn","app.main:app","--host","0.0.0.0","--port","8080","--reload"]
 
 volumes:
   sqldata:
