@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import * as api from '../api'
 import Editable from '../componentes/Editable'
 import Aviso from '../componentes/Aviso'
-import { num, plata, fecha } from '../formato'
+import { num, numCorto, plata, fecha, porGrupo } from '../formato'
 
 /**
  * Materiales y precios. Todo editable.
@@ -83,38 +83,44 @@ export default function Materiales({ obra, alCambiar }) {
               <th>Desde</th><th></th>
             </tr>
           </thead>
-          <tbody>
-            {filas.map((m, i) => (
-              <tr key={m.id}>
-                <td className="ob-table__gutter">{i + 1}</td>
-                <td>
-                  <Editable valor={m.nombre} alGuardar={(v) => editar(m.id, { nombre: v })} />
-                  {m.propio ? <span className="ob-chip ob-chip--ok" style={{ marginLeft: '.4rem' }}>propio</span>
-                    : m.editado ? <span className="ob-chip ob-chip--mudo" style={{ marginLeft: '.4rem' }}>editado</span> : null}
-                </td>
-                <td><Editable valor={m.marca} alGuardar={(v) => editar(m.id, { marca: v })} vacio="sin marca" /></td>
-                <td className="ob-table__sec">{m.unidad_consumo}</td>
-                <td><Editable valor={m.presentacion} alGuardar={(v) => editar(m.id, { presentacion: v })} /></td>
-                <td className="ob-num">
-                  <Editable valor={m.unidades_x_pres} formato="numero" decimales={4}
-                    alGuardar={(v) => editar(m.id, { unidades_x_pres: v })}
-                    titulo="Cuanto trae la presentacion, en la unidad de consumo" />
-                </td>
-                <td className="ob-num">
-                  <Editable valor={m.precio} formato="plata"
-                    alGuardar={(v) => ponerPrecio(m.id, v)}
-                    vacio="cargar" titulo="Escribe el precio: se guarda como fila nueva" />
-                </td>
-                <td className="ob-table__sec">{fecha(m.precio_desde)}</td>
-                <td style={{ width: '5rem' }}>
-                  {m.precio != null && (
-                    <button className="ob-btn" style={{ padding: '.05rem .4rem' }}
-                      onClick={() => verHistorial(m)}>Historial</button>
-                  )}
-                </td>
+          {porGrupo(filas, 'rubro').map((g) => (
+            <tbody key={g.nombre}>
+              <tr className="ob-grupo">
+                <td></td>
+                <td colSpan={8}>{g.nombre} · {g.filas.length} {g.filas.length === 1 ? 'material' : 'materiales'}</td>
               </tr>
-            ))}
-          </tbody>
+              {g.filas.map((m) => (
+                <tr key={m.id}>
+                  <td className="ob-table__gutter">{filas.indexOf(m) + 1}</td>
+                  <td>
+                    <Editable valor={m.nombre} alGuardar={(v) => editar(m.id, { nombre: v })} />
+                    {m.propio ? <span className="ob-chip ob-chip--ok" style={{ marginLeft: '.4rem' }}>propio</span>
+                      : m.editado ? <span className="ob-chip ob-chip--mudo" style={{ marginLeft: '.4rem' }}>editado</span> : null}
+                  </td>
+                  <td><Editable valor={m.marca} alGuardar={(v) => editar(m.id, { marca: v })} vacio="sin marca" /></td>
+                  <td className="ob-table__sec">{m.unidad_consumo}</td>
+                  <td><Editable valor={m.presentacion} alGuardar={(v) => editar(m.id, { presentacion: v })} /></td>
+                  <td className="ob-num">
+                    <Editable valor={m.unidades_x_pres} formato="numero" decimales={4}
+                      alGuardar={(v) => editar(m.id, { unidades_x_pres: v })}
+                      titulo="Cuanto trae la presentacion, en la unidad de consumo" />
+                  </td>
+                  <td className="ob-num">
+                    <Editable valor={m.precio} formato="plata"
+                      alGuardar={(v) => ponerPrecio(m.id, v)}
+                      vacio="cargar" titulo="Escribe el precio: se guarda como fila nueva" />
+                  </td>
+                  <td className="ob-table__sec">{fecha(m.precio_desde)}</td>
+                  <td style={{ width: '5rem' }}>
+                    {m.precio != null && (
+                      <button className="ob-btn" style={{ padding: '.05rem .4rem' }}
+                        onClick={() => verHistorial(m)}>Historial</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
         </table>
       </div>
 

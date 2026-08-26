@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import * as api from '../api'
 import Editable from '../componentes/Editable'
 import Aviso from '../componentes/Aviso'
-import { num } from '../formato'
+import { num, porGrupo } from '../formato'
 
 /** El computo: que tarea, donde, cuanto. Es la entrada del motor. */
 export default function Computo({ obra, alCambiar }) {
@@ -60,44 +60,51 @@ export default function Computo({ obra, alCambiar }) {
           <thead>
             <tr>
               <th className="ob-table__gutter"></th>
-              <th>Rubro</th><th>Tarea</th><th>Ubicacion</th>
+              <th>Tarea</th><th>Ubicacion</th>
               <th className="ob-num">Cantidad</th><th>Un.</th><th></th>
             </tr>
           </thead>
-          <tbody>
-            {filas.map((f, i) => (
-              <tr key={f.id}>
-                <td className="ob-table__gutter">{i + 1}</td>
-                <td className="ob-table__sec">{f.rubro}</td>
-                <td>{f.tarea}{f.cerrado ? <span className="ob-chip ob-chip--ok" style={{ marginLeft: '.5rem' }}>cerrada</span> : null}</td>
-                <td>
-                  <Editable valor={f.ubicacion} deshabilitado={!!f.cerrado}
-                    alGuardar={(v) => editar(f.id, { ubicacion: v })} vacio="sin ubicar" />
-                </td>
-                <td className="ob-num">
-                  <Editable valor={f.cantidad} formato="numero" deshabilitado={!!f.cerrado}
-                    alGuardar={(v) => editar(f.id, { cantidad: v })} />
-                </td>
-                <td className="ob-table__sec">{f.unidad_medicion}</td>
-                <td style={{ width: '4rem' }}>
-                  {!f.cerrado && (
-                    <button className="ob-btn" style={{ padding: '.05rem .4rem' }}
-                      onClick={() => quitar(f.id)} title="Quitar la fila">Quitar</button>
-                  )}
-                </td>
+          {porGrupo(filas, 'rubro').map((g) => (
+            <tbody key={g.nombre}>
+              <tr className="ob-grupo">
+                <td></td>
+                <td colSpan={6}>{g.nombre} · {g.filas.length} {g.filas.length === 1 ? 'fila' : 'filas'}</td>
               </tr>
-            ))}
-            {filas.length === 0 && (
-              <tr><td colSpan={7} style={{ color: 'var(--ob-ink-3)', padding: 'var(--ob-gap-4)' }}>
+              {g.filas.map((f) => (
+                <tr key={f.id}>
+                  <td className="ob-table__gutter">{filas.indexOf(f) + 1}</td>
+                  <td>{f.tarea}{f.cerrado ? <span className="ob-chip ob-chip--ok" style={{ marginLeft: '.5rem' }}>cerrada</span> : null}</td>
+                  <td>
+                    <Editable valor={f.ubicacion} deshabilitado={!!f.cerrado}
+                      alGuardar={(v) => editar(f.id, { ubicacion: v })} vacio="sin ubicar" />
+                  </td>
+                  <td className="ob-num">
+                    <Editable valor={f.cantidad} formato="numero" deshabilitado={!!f.cerrado}
+                      alGuardar={(v) => editar(f.id, { cantidad: v })} />
+                  </td>
+                  <td className="ob-table__sec">{f.unidad_medicion}</td>
+                  <td style={{ width: '4rem' }}>
+                    {!f.cerrado && (
+                      <button className="ob-btn" style={{ padding: '.05rem .4rem' }}
+                        onClick={() => quitar(f.id)} title="Quitar la fila">Quitar</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
+          {filas.length === 0 && (
+            <tbody>
+              <tr><td colSpan={6} style={{ color: 'var(--ob-ink-3)', padding: 'var(--ob-gap-4)' }}>
                 Todavia no hay computo. Agrega la primera tarea abajo y la lista de compra se arma sola.
               </td></tr>
-            )}
-          </tbody>
+            </tbody>
+          )}
           {filas.length > 0 && (
             <tfoot>
               <tr>
                 <td className="ob-table__gutter"></td>
-                <td colSpan={3}>{filas.length} filas de computo</td>
+                <td colSpan={2}>{filas.length} filas de computo</td>
                 <td className="ob-num ob-total">{num(total, 2)}</td>
                 <td colSpan={2} className="ob-table__sec">suma de cantidades</td>
               </tr>

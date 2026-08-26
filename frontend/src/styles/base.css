@@ -198,3 +198,26 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- bandas de rubro dentro de una tabla ----------
+   Un presupuesto de obra se lee por rubro. La banda separa sin
+   partir la tabla en varias, asi las columnas siguen alineadas. */
+.ob-table tr.ob-grupo td {
+  background: var(--ob-surface-2);
+  color: var(--ob-ink-2);
+  font-size: var(--ob-fs-2xs);
+  letter-spacing: var(--ob-label-ls);
+  text-transform: uppercase;
+  font-weight: var(--ob-fw-semi);
+  border-right: none;
+  border-top: 1px solid var(--ob-line-strong);
+  padding-top: .5rem;
+  padding-bottom: .3rem;
+}
+.ob-table tr.ob-grupo .ob-grupo__monto {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--ob-fs-sm);
+  color: var(--ob-ink);
+}
+.ob-table tbody tr.ob-grupo:hover td { background: var(--ob-surface-2); }
