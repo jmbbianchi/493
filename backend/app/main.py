@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
+from .routers import calculadora, computo, obras
 
 app = FastAPI(title="obra493", docs_url="/docs")
 
@@ -30,6 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(obras.router)
+app.include_router(calculadora.router)
+app.include_router(computo.router)
+
 
 @app.get("/health")
 def health():
@@ -43,6 +48,7 @@ def health():
 
 @app.get("/api/indices/ultimo")
 def ultimo_indice(codigo: str):
+    """Sin clave: son datos publicos del BCRA y los usa la portada."""
     filas = db.query(
         "SELECT TOP 1 fecha, valor FROM indice_valor "
         "WHERE codigo = %s ORDER BY fecha DESC",
