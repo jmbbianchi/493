@@ -22,3 +22,7 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# artefactos del puente de archivos
+.fuse_hidden*
+_to_delete/

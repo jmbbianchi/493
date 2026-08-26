@@ -117,6 +117,10 @@ WHEN NOT MATCHED THEN INSERT (codigo, nombre, rubro_id, unidad_medicion)
    desperdicio_pct NULL hereda del material, y ese de la obra.
    La malla es la unica con desperdicio propio: 15 % de solape.
 
+   OJO con la malla: el consumo va en m2 de malla por m2 de tarea (= 1),
+   NO en panios. El divisor a panios ya lo hace unidades_x_pres = 14,4.
+   Ponerle 0,069444 aca divide dos veces y da 2 panios en vez de 20.
+
    OJO con pegamento y pastina: en el Excel aparecian en las 18 filas
    porque estaban precargados en la columna, pero solo se activaban
    con "Lleva Ceramico? = Si". Aca se cargan SOLO en las dos tareas
@@ -131,7 +135,7 @@ WHEN NOT MATCHED THEN INSERT (codigo, nombre, rubro_id, unidad_medicion)
     ('CONT-TOSCA-12-CER', 'PIE-1030',   0.111000, NULL),
     ('CONT-TOSCA-12-CER', 'HID-CER',    0.200000, NULL),
     ('CONT-TOSCA-12-CER', 'NYL-200',    1.100000, NULL),
-    ('CONT-TOSCA-12-CER', 'MALLA-5',    0.069444, 15.00),
+    ('CONT-TOSCA-12-CER', 'MALLA-5',    1.000000, 15.00),
     ('CONT-TOSCA-12-CER', 'PEG-PORC',   5.000000, NULL),
     ('CONT-TOSCA-12-CER', 'PAST-2',     0.160000, NULL),
     -- Contrapiso s/tosca 12 cm, terminacion madera
@@ -140,20 +144,20 @@ WHEN NOT MATCHED THEN INSERT (codigo, nombre, rubro_id, unidad_medicion)
     ('CONT-TOSCA-12-MAD', 'PIE-1030',   0.111000, NULL),
     ('CONT-TOSCA-12-MAD', 'HID-CER',    0.200000, NULL),
     ('CONT-TOSCA-12-MAD', 'NYL-200',    1.100000, NULL),
-    ('CONT-TOSCA-12-MAD', 'MALLA-5',    0.069444, 15.00),
+    ('CONT-TOSCA-12-MAD', 'MALLA-5',    1.000000, 15.00),
     -- Contrapiso s/tosca 8 cm, deck
     ('CONT-TOSCA-8-DECK', 'CEM-25',    27.300000, NULL),
     ('CONT-TOSCA-8-DECK', 'ARE-M3',     0.057000, NULL),
     ('CONT-TOSCA-8-DECK', 'PIE-1030',   0.074000, NULL),
     ('CONT-TOSCA-8-DECK', 'HID-CER',    0.200000, NULL),
     ('CONT-TOSCA-8-DECK', 'NYL-200',    1.100000, NULL),
-    ('CONT-TOSCA-8-DECK', 'MALLA-5',    0.069444, 15.00),
+    ('CONT-TOSCA-8-DECK', 'MALLA-5',    1.000000, 15.00),
     -- Contrapiso sobre losa
     ('CONT-LOSA-10',      'CEM-25',    36.200000, NULL),
     ('CONT-LOSA-10',      'ARE-M3',     0.075000, NULL),
     ('CONT-LOSA-10',      'PIE-1030',   0.111000, NULL),
     ('CONT-LOSA-10',      'HID-CER',    0.200000, NULL),
-    ('CONT-LOSA-10',      'MALLA-5',    0.069444, 15.00),
+    ('CONT-LOSA-10',      'MALLA-5',    1.000000, 15.00),
     -- Contrapiso alivianado con pendiente + membrana
     ('CONT-ALIV-MEMB',    'CEM-25',    20.000000, NULL),
     ('CONT-ALIV-MEMB',    'ARE-M3',     0.040000, NULL),

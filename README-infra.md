@@ -48,7 +48,7 @@ El rol `Contributor` está acotado al resource group, no a la suscripción.
 
 | Recurso | Configuración | u$d/mes | Qué lo haría subir |
 |---|---|---|---|
-| Azure SQL `db-obra493` | GP serverless 0.5–2 vCore, **free limit ON**, auto-pause 15 min | **0,00** | Que la base no pause. 100.000 vCore-seg ÷ 0,5 vCore = **55 h online/mes**. Un pool de conexiones abierto la deja despierta y quema la cuota en dos días. |
+| Azure SQL `db-obra493` | GP serverless 0,5–2 vCore, **free limit ON**, auto-pause **60 min (fijo)** | **0,00** | Ver el apartado de abajo: el delay de pausa es lo que más consume, no tu uso. |
 | Container App `obra493-backend` | 0,5 vCPU / 1 Gi, min-replicas **0** | **0,00 – 3,50** | El free grant de Container Apps (180.000 vCPU-seg) es **por suscripción** y lo comparten el Facturador y FinArg. Si ya está agotado, esto pasa a facturar desde el primer segundo. Y si alguna vez ponés `min-replicas 1`, son ~u$d 11/mes fijos. |
 | Container Apps Job `obra493-indices` | 0,25 vCPU, 30 s/día | **0,00 – 0,10** | Que el job se cuelgue. Por eso tiene `--replica-timeout 300`. |
 | Static Web App `swa-obra493` | plan Free | **0,00** | Pasar de 100 GB de banda al mes. Con este uso, imposible. |
@@ -78,6 +78,32 @@ az monitor metrics alert create -g rg-obra493 -n "sql-free-bajo" `
   --description "Quedan menos de 10.000 vCore-seg gratis este mes"
 ```
 
+### El presupuesto real: 55,5 horas online por mes
+
+Los 100.000 vCore-segundos se consumen **mientras la base está encendida**, no según
+el CPU. A `min-capacity 0,5` eso son **55,5 horas de reloj por mes**.
+
+Y hay una restricción de Azure que no se puede esquivar: en una base con free limit,
+el auto-pause queda **fijo en 60 minutos** y no acepta `--auto-pause-delay`. Intentarlo
+devuelve `ProvisioningDisabled`.
+
+**La consecuencia práctica:** cada vez que abrís la app pagás tu tiempo de uso *más una
+hora de espera*. La hora de espera pesa más que el uso real.
+
+| Patrón de uso | Horas online/mes | vCore-seg | |
+|---|---|---|---|
+| 1 h, 4 días por semana | 34 | 61.200 | entra holgado |
+| 3 h, 2 días por semana | 32 | 57.600 | entra holgado |
+| 1 h, todos los días | 60 | 108.000 | se pasa |
+| 2 h, todos los días | 90 | 162.000 | se pasa por mucho |
+
+**La regla que sale de ahí: una sesión larga cuesta mucho menos que cinco cortas.**
+Dos sesiones de tres horas por semana entran cómodas; abrir la app diez minutos cada
+mañana te come la cuota antes de fin de mes.
+
+Y el corolario técnico, que ya está resuelto en `backend/app/db.py`: un pool de
+conexiones persistente impide la pausa por completo y quema las 55 horas en dos días.
+
 ### Si el free limit se agota
 
 La base queda **pausada hasta el 1° del mes siguiente**. Para desbloquearla
@@ -89,8 +115,14 @@ az sql db update -g rg-obra493 -s sql-obra493 -n db-obra493 `
   --exhaustion-behavior BillOverUsage
 ```
 
-El excedente se cobra a tarifa serverless normal: unos u$d 0,15 por cada
-1.000 vCore-segundos extra.
+El excedente se cobra a tarifa serverless normal: unos u$d 0,52 por vCore-hora, o sea
+~u$d 0,26 por hora online a 0,5 vCore.
+
+**La otra salida**, si el patrón de uso resulta ser diario y corto: pasar a **Basic DTU**
+(u$d ~5/mes, 2 GB, siempre encendida, sin arranque en frío ni riesgo de bloqueo). Entra
+en el presupuesto de u$d 0–6 y elimina el problema de raíz. Va contra la regla de "nada
+de tiers fijos", pero esa regla nació de un S3 de u$d 124, no de un Basic de u$d 5 —
+vale la pena reconsiderarla si el free limit resulta incómodo.
 
 ## 3.bis · Visibilidad del package de GHCR
 
