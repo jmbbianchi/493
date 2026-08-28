@@ -69,7 +69,7 @@ en el environment. Para documentos e imágenes no hace falta infra nueva.
 
 Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
 `004_precios_y_edicion`, `005_indices_historia`, `006_presupuestos`,
-`007_pagos`.
+`007_pagos`, `008_mano_obra`.
 
 > **La 005 figuraba como aplicada y no lo estaba.** Se corrió recién el
 > 28-ago-2026, y por eso el job de índices venía muriendo con `Invalid
@@ -80,11 +80,11 @@ Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
 Tablas: `usuario`, `obra`, `obra_usuario`, `rubro`, `material`, `tarea_tipo`,
 `coeficiente`, `obra_coeficiente`, `obra_material`, `obra_tarea`, `proveedor`,
 `computo`, `computo_coeficiente`, `precio`, `indice`, `indice_valor`,
-`presupuesto`, `plan_tramo`, `cuota`, `pago`.
+`presupuesto`, `plan_tramo`, `cuota`, `pago`, `computo_material`.
 
 Funciones: `fn_ipc_nivel`, `fn_coef_ipc`. Vistas: `v_precio_vigente`,
 `v_indice_cobertura`, `v_presupuestado_rubro`, `v_pagado_rubro`,
-`v_pagado_presupuesto`.
+`v_pagado_presupuesto`, `v_tarea_sin_coeficiente`.
 
 Series de índices completas desde 2016. `IPC_NIVEL` tiene 127 meses
 encadenados hasta jul-2026.
@@ -104,8 +104,6 @@ planes de pago viven adentro del rubro.
 
 ### Lo que NO existe
 
-- Mano de obra. Ni una tabla. Y es la mitad del costo de una obra.
-- Materiales sin rendimiento (caños, artefactos, aberturas).
 - Entregas: remito con detalle por material.
 - Plazos, avance, dependencias. **No hay una sola fecha en la base.**
 - Login. El acceso es una clave compartida (`APP_KEY`), no autenticación.
@@ -467,6 +465,17 @@ ese pago.
 4. El avance, ¿se carga por tarea o por rubro?
 5. Los 762 m² de revoque grueso del cómputo, ¿son netos de vanos o brutos?
    Cambia la cal y el cemento de todo el rubro.
+
+6. **¿A qué rubro pertenece el costo de un material: al del material o al de
+   la tarea que lo consume?** Apareció verificando E4 y no estaba previsto.
+   Hoy los materiales se agrupan por el rubro del MATERIAL y la mano de obra
+   por el rubro de la TAREA. Consecuencia visible: «Revoques» aparece sin
+   teórico aunque tenga 762 m² computados, porque su cal y su cemento viven
+   en el rubro «Mampostería» de la biblioteca. Para comparar teórico contra
+   presupuestado hacen falta las dos cosas en el mismo rubro; para la lista
+   de compra conviene el rubro del material, porque el cemento se compra una
+   vez para toda la obra. Son dos agrupaciones distintas para dos preguntas
+   distintas y hay que decidir cuál manda en la tabla de rubros.
 
 ---
 
