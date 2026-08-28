@@ -125,7 +125,16 @@ Excel con mejor tipografía, no como una app.
 9. **Plazos: fechas duras teóricas + dependencias que empujan.** Si una tarea
    se corre dos semanas, las que dependen de ella se corren también. No es un
    motor de camino crítico; eso es otro producto.
-10. **El redondeo va una sola vez**, al final, sobre el total consolidado de
+10. **La moneda del presupuesto es peso o dolar oficial del BCRA**, nada
+    mas. Los dos ya se guardan diarios, asi que no entra ninguna fuente
+    nueva al job de indices. El blue y el MEP quedan afuera: si algun dia
+    se pacta contra el paralelo, es una fuente nueva y una decision nueva.
+11. **Un pago se imputa a un solo presupuesto.** `pago` lleva
+    `presupuesto_id` y `cuota_id` nullables y no hay tabla de imputaciones.
+    Si una transferencia cubrio dos cosas, se cargan dos pagos. Partir un
+    pago obligaria a una pantalla de reparto, y ahi se van los quince
+    segundos parado en la obra, que es el criterio de aceptacion de E3.
+12. **El redondeo va una sola vez**, al final, sobre el total consolidado de
     cada material. Nunca por tarea: redondear por tarea infla la compra y es
     uno de los errores que tenía la planilla original.
 
@@ -426,10 +435,12 @@ ese pago.
 
 ## 7. Preguntas abiertas — no inventar la respuesta
 
-1. **¿Qué dólar?** El BCRA da oficial minorista y mayorista, diarios, y ya se
-   guardan. El blue y el MEP necesitan otra fuente. ¿Los precios con los
-   corralones se hablan en alguno de esos?
-2. ¿Un pago puede partirse entre dos presupuestos?
+~~1. ¿Qué dólar?~~ Contestada el 28-ago-2026: peso y dólar oficial del BCRA.
+   Es la decisión 10.
+
+~~2. ¿Un pago puede partirse entre dos presupuestos?~~ Contestada el
+   28-ago-2026: no. Es la decisión 11.
+
 3. Las entregas, ¿se cargan por remito con detalle por material, o alcanza
    con un porcentaje de lo pedido?
 4. El avance, ¿se carga por tarea o por rubro?
