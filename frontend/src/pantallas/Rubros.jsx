@@ -58,6 +58,14 @@ export default function Rubros() {
   const totalP = filas.reduce((a, r) => a + (r.p ? r.p.proyectado : 0), 0)
   const hayPresupuestos = filas.some((r) => r.p)
 
+  // La diferencia del total SOLO suma los rubros que tienen los dos numeros.
+  // Restar el total presupuestado del total teorico cuando cada uno cubre
+  // rubros distintos da una cifra enorme que no significa nada, y es
+  // exactamente el tipo de numero que esta app existe para no mostrar.
+  const comparables = filas.filter((r) => r.t?.hay && r.p)
+  const difTotal = comparables.length
+    ? comparables.reduce((a, r) => a + (r.p.proyectado - r.t.monto), 0) : null
+
   return (
     <>
       <div className="ob-toolbar">
@@ -122,10 +130,11 @@ export default function Rubros() {
               <td className={`ob-num${hayPresupuestos ? ' ob-total' : ' ob-table__sec'}`}>
                 {hayPresupuestos ? plata(totalP) : '—'}
               </td>
-              <td className={`ob-num ${!hayPresupuestos ? 'ob-table__sec'
-                : `ob-delta--${totalP > totalT ? 'sube' : 'baja'}`}`}>
-                {hayPresupuestos
-                  ? `${totalP > totalT ? '+' : ''}${plata(totalP - totalT)}` : '—'}
+              <td className={`ob-num ${difTotal == null ? 'ob-table__sec'
+                : `ob-delta--${difTotal > 0 ? 'sube' : 'baja'}`}`}
+                title={difTotal == null ? 'Ningun rubro tiene el teorico y el presupuestado a la vez'
+                  : `Solo sobre ${comparables.length} rubro(s) con los dos numeros`}>
+                {difTotal == null ? '—' : `${difTotal > 0 ? '+' : ''}${plata(difTotal)}`}
               </td>
               <td className="ob-num ob-table__sec">—</td>
               <td className="ob-num ob-table__sec">—</td>
