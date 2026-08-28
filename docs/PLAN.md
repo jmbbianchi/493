@@ -68,14 +68,24 @@ en el environment. Para documentos e imágenes no hace falta infra nueva.
 ### Base de datos
 
 Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
-`004_precios_y_edicion`, `005_indices_historia`.
+`004_precios_y_edicion`, `005_indices_historia`, `006_presupuestos`.
+
+> **La 005 figuraba como aplicada y no lo estaba.** Se corrió recién el
+> 28-ago-2026, y por eso el job de índices venía muriendo con `Invalid
+> column name 'backfill_ok'`: por eso `IPC_NIVEL` estaba vacío. Antes de
+> dar una migración por aplicada conviene mirar `sys.tables`, no el
+> archivo del repo.
 
 Tablas: `usuario`, `obra`, `obra_usuario`, `rubro`, `material`, `tarea_tipo`,
 `coeficiente`, `obra_coeficiente`, `obra_material`, `obra_tarea`, `proveedor`,
-`computo`, `computo_coeficiente`, `precio`, `indice`, `indice_valor`.
+`computo`, `computo_coeficiente`, `precio`, `indice`, `indice_valor`,
+`presupuesto`, `plan_tramo`, `cuota`.
 
 Funciones: `fn_ipc_nivel`, `fn_coef_ipc`. Vistas: `v_precio_vigente`,
-`v_indice_cobertura`.
+`v_indice_cobertura`, `v_presupuestado_rubro`.
+
+Series de índices completas desde 2016. `IPC_NIVEL` tiene 127 meses
+encadenados hasta jul-2026.
 
 ### Backend (FastAPI)
 
@@ -134,7 +144,15 @@ Excel con mejor tipografía, no como una app.
     Si una transferencia cubrio dos cosas, se cargan dos pagos. Partir un
     pago obligaria a una pantalla de reparto, y ahi se van los quince
     segundos parado en la obra, que es el criterio de aceptacion de E3.
-12. **El redondeo va una sola vez**, al final, sobre el total consolidado de
+12. **El proyectado extrapola con la última variación mensual publicada.**
+    El coeficiente real de una cuota futura no existe: el índice todavía no
+    salió. Dejarla en nominal diría que no hay inflación; dejarla afuera
+    diría que la cuota no cuesta. Así que se capitaliza la última variación
+    del INDEC y la respuesta dice cuál usó y de qué mes, para que el número
+    se pueda discutir. El **real** sigue sumando sólo coeficientes
+    publicados: proyectado y real son columnas distintas justamente porque
+    uno es estimación y el otro es hecho.
+13. **El redondeo va una sola vez**, al final, sobre el total consolidado de
     cada material. Nunca por tarea: redondear por tarea infla la compra y es
     uno de los errores que tenía la planilla original.
 
@@ -451,7 +469,6 @@ ese pago.
 
 ## 8. Deuda conocida
 
-- `IPC_NIVEL` está vacío: falta correr el job una vez con el código nuevo.
 - `deploy-obra493.ps1` no carga `APP_KEY`; se puso a mano.
 - `--system-assigned` está deprecado, va `--mi-system-assigned`.
 - El Excel `493.xlsx` tiene la celda del Ladrillo H18 apuntando a la columna
