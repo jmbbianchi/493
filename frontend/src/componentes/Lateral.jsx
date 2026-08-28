@@ -23,6 +23,10 @@ const SECCIONES = [
   ['rendimientos', 'Rendimientos'],
 ]
 
+// El alta de obra cuelga del mismo selector y no de un boton aparte: es
+// donde uno va a buscar "otra obra", tenga o no que crearla todavia.
+const NUEVA = '__nueva'
+
 export default function Lateral({ obras, obra }) {
   const navegar = useNavigate()
   const { pathname } = useLocation()
@@ -30,6 +34,7 @@ export default function Lateral({ obras, obra }) {
   // Al cambiar de obra se conserva la seccion: si estabas mirando la lista
   // de compra de una obra, queres la lista de compra de la otra.
   const cambiarObra = (id) => {
+    if (id === NUEVA) { navegar('/obras/nueva'); return }
     const seccion = pathname.split('/')[3] || 'como-viene'
     navegar(`/obra/${id}/${seccion}`)
   }
@@ -43,6 +48,7 @@ export default function Lateral({ obras, obra }) {
         <select className="ob-input ob-lateral__select" value={obra.id}
           onChange={(e) => cambiarObra(e.target.value)}>
           {obras.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+          <option value={NUEVA}>+ Obra nueva…</option>
         </select>
       </div>
 

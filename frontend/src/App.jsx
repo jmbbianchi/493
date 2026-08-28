@@ -11,6 +11,7 @@ import Computo from './pantallas/Computo'
 import Lista from './pantallas/Lista'
 import Materiales from './pantallas/Materiales'
 import Rendimientos from './pantallas/Rendimientos'
+import ObraNueva from './pantallas/ObraNueva'
 import Aviso from './componentes/Aviso'
 
 export default function App() {
@@ -42,7 +43,7 @@ export default function App() {
   if (error && obras === null) return <Aviso error={error} />
   // La primera consulta despues del auto-pause tarda unos 40 segundos.
   if (obras === null) return <p className="ob-cargando">Despertando la base…</p>
-  if (obras.length === 0) return <PrimeraObra alCrear={cargarObras} />
+  if (obras.length === 0) return <ObraNueva primera alCrear={cargarObras} />
 
   const inicio = `/obra/${obras[0].id}/como-viene`
   const tocado = () => setVersion((v) => v + 1)
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="materiales" element={<ConObra Pantalla={Materiales} />} />
         <Route path="rendimientos" element={<ConObra Pantalla={Rendimientos} />} />
       </Route>
+      <Route path="/obras/nueva" element={<ObraNueva alCrear={cargarObras} />} />
       <Route path="*" element={<Navigate to={inicio} replace />} />
     </Routes>
   )
@@ -108,54 +110,6 @@ function Puerta({ alEntrar }) {
         )}
         <button className="ob-btn ob-btn--primario" type="submit"
           style={{ width: '100%', marginTop: 'var(--ob-gap-3)' }}>Entrar</button>
-      </form>
-    </div>
-  )
-}
-
-function PrimeraObra({ alCrear }) {
-  const [d, setD] = useState({ nombre: '', nomenclatura: '', sup_cubierta: '', desperdicio_pct: 5 })
-  const [error, setError] = useState(null)
-
-  const crear = async (e) => {
-    e.preventDefault()
-    try {
-      await api.post('/api/obras', {
-        nombre: d.nombre,
-        nomenclatura: d.nomenclatura || null,
-        sup_cubierta: d.sup_cubierta ? Number(String(d.sup_cubierta).replace(',', '.')) : null,
-        desperdicio_pct: Number(d.desperdicio_pct),
-      })
-      alCrear()
-    } catch (err) { setError(err) }
-  }
-
-  return (
-    <div style={{ padding: 'var(--ob-gap-6)', maxWidth: '34rem' }}>
-      <h2 style={{ margin: 0, fontSize: 'var(--ob-fs-xl)' }}>Todavia no hay ninguna obra</h2>
-      <p style={{ color: 'var(--ob-ink-2)', fontSize: 'var(--ob-fs-sm)' }}>
-        Crea la primera y la biblioteca de tareas y materiales queda disponible al instante.
-      </p>
-      <Aviso error={error} alCerrar={() => setError(null)} />
-      <form onSubmit={crear} className="ob-card"
-        style={{ padding: 'var(--ob-gap-4)', display: 'grid', gap: 'var(--ob-gap-3)' }}>
-        <label><span className="ob-label">Nombre</span>
-          <input className="ob-input" required style={{ width: '100%' }} value={d.nombre}
-            placeholder="493 - Acantilados"
-            onChange={(e) => setD({ ...d, nombre: e.target.value })} /></label>
-        <label><span className="ob-label">Nomenclatura catastral</span>
-          <input className="ob-input" style={{ width: '100%' }} value={d.nomenclatura}
-            placeholder="Circ / Secc / Manz / Lote"
-            onChange={(e) => setD({ ...d, nomenclatura: e.target.value })} /></label>
-        <label><span className="ob-label">Superficie cubierta (m2)</span>
-          <input className="ob-input ob-num" style={{ width: '100%' }} inputMode="decimal"
-            value={d.sup_cubierta} placeholder="231,46"
-            onChange={(e) => setD({ ...d, sup_cubierta: e.target.value })} /></label>
-        <label><span className="ob-label">Desperdicio por defecto (%)</span>
-          <input className="ob-input ob-num" style={{ width: '100%' }} inputMode="decimal"
-            value={d.desperdicio_pct}
-            onChange={(e) => setD({ ...d, desperdicio_pct: e.target.value })} /></label>
-        <button className="ob-btn ob-btn--primario" type="submit">Crear la obra</button>
       </form>
     </div>
   )

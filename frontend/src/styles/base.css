@@ -466,3 +466,11 @@ body {
   font-size: var(--ob-fs-xs); color: var(--ob-ink-3);
   max-width: 46rem;
 }
+
+/* ---------- alta de obra ---------- */
+.ob-obranueva { padding: var(--ob-gap-6); max-width: 32rem; }
+.ob-obranueva__titulo { margin: var(--ob-gap-3) 0 var(--ob-gap-2); font-size: var(--ob-fs-2xl); letter-spacing: -0.02em; }
+.ob-obranueva__bajada { margin: 0 0 var(--ob-gap-4); color: var(--ob-ink-2); font-size: var(--ob-fs-sm); line-height: var(--ob-lh-prose); }
+.ob-obranueva__form { padding: var(--ob-gap-4); display: grid; gap: var(--ob-gap-3); }
+.ob-obranueva__form label { display: grid; gap: var(--ob-gap-1); }
+.ob-obranueva__form .ob-input { width: 100%; }
