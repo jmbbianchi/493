@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
-from .routers import calculadora, computo, obras, presupuestos
+from .routers import calculadora, computo, obras, pagos, presupuestos
 
 app = FastAPI(title="obra493", docs_url="/docs")
 
@@ -35,6 +35,7 @@ app.include_router(obras.router)
 app.include_router(calculadora.router)
 app.include_router(computo.router)
 app.include_router(presupuestos.router)
+app.include_router(pagos.router)
 
 
 @app.get("/health")

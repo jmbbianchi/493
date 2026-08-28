@@ -62,6 +62,10 @@ export default function Rubros() {
   // Restar el total presupuestado del total teorico cuando cada uno cubre
   // rubros distintos da una cifra enorme que no significa nada, y es
   // exactamente el tipo de numero que esta app existe para no mostrar.
+  const totalPagado = filas.reduce((a, r) => a + (r.p?.pagado ?? 0), 0)
+  const totalSaldo = filas.reduce((a, r) => a + (r.p?.saldo ?? 0), 0)
+  const hayPagos = filas.some((r) => r.p?.pagado != null)
+
   const comparables = filas.filter((r) => r.t?.hay && r.p)
   const difTotal = comparables.length
     ? comparables.reduce((a, r) => a + (r.p.proyectado - r.t.monto), 0) : null
@@ -116,8 +120,12 @@ export default function Rubros() {
                     : `ob-delta--${dif > 0 ? 'sube' : 'baja'}`}`}>
                     {dif == null ? '—' : `${dif > 0 ? '+' : ''}${plata(dif)}`}
                   </td>
-                  <td className="ob-num ob-table__sec">—</td>
-                  <td className="ob-num ob-table__sec">—</td>
+                  <td className={`ob-num${r.p?.pagado == null ? ' ob-table__sec' : ''}`}>
+                    {r.p?.pagado == null ? '—' : plata(r.p.pagado)}
+                  </td>
+                  <td className={`ob-num${r.p?.saldo == null ? ' ob-table__sec' : ''}`}>
+                    {r.p?.saldo == null ? '—' : plata(r.p.saldo)}
+                  </td>
                 </tr>
               )
             })}
@@ -136,8 +144,12 @@ export default function Rubros() {
                   : `Solo sobre ${comparables.length} rubro(s) con los dos numeros`}>
                 {difTotal == null ? '—' : `${difTotal > 0 ? '+' : ''}${plata(difTotal)}`}
               </td>
-              <td className="ob-num ob-table__sec">—</td>
-              <td className="ob-num ob-table__sec">—</td>
+              <td className={`ob-num${hayPagos ? ' ob-total' : ' ob-table__sec'}`}>
+                {hayPagos ? plata(totalPagado) : '—'}
+              </td>
+              <td className={`ob-num${hayPagos ? '' : ' ob-table__sec'}`}>
+                {hayPagos ? plata(totalSaldo) : '—'}
+              </td>
             </tr>
           </tfoot>
         </table>

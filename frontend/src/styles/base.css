@@ -383,3 +383,63 @@ body {
    el subrayado convierte la tabla en un cartel de neon. */
 .ob-table a { color: var(--ob-accent); text-decoration: none; }
 .ob-table a:hover { text-decoration: underline; }
+
+/* ---------- registrar un pago ----------
+   La unica pantalla de la app que se diseña para el telefono primero. El
+   resto puede seguir siendo de escritorio; esta no, porque se usa parado
+   en la obra con una mano. De ahi los objetivos de toque grandes y el
+   ancho maximo: en el monitor no se estira a lo ancho, se queda como una
+   columna, que es como se lee un formulario de tres campos. */
+.ob-pagar { padding: var(--ob-gap-4); max-width: 30rem; }
+.ob-pagar__paso { display: block; margin: var(--ob-gap-4) 0 var(--ob-gap-2); }
+.ob-pagar__paso:first-child { margin-top: 0; }
+.ob-pagar__destinos { display: grid; gap: var(--ob-gap-2); }
+.ob-pagar__campo { width: 100%; margin-top: var(--ob-gap-2); }
+
+.ob-destino {
+  display: grid; gap: 2px;
+  text-align: left; width: 100%;
+  padding: var(--ob-gap-3);
+  background: var(--ob-surface);
+  border: var(--ob-border);
+  border-radius: var(--ob-radius);
+  font-family: inherit; cursor: pointer;
+  /* 44 px es el minimo que se puede tocar sin errar con el pulgar. Una
+     fila de 30 px como el resto de la app no sirve en la obra. */
+  min-height: 44px;
+}
+.ob-destino--elegido { border-color: var(--ob-accent); background: var(--ob-accent-soft); }
+.ob-destino__nombre { font-weight: var(--ob-fw-semi); font-size: var(--ob-fs-md); }
+.ob-destino__saldo  { font-size: var(--ob-fs-xs); color: var(--ob-ink-2); text-align: left; }
+.ob-destino__barra {
+  height: 3px; background: var(--ob-line); border-radius: var(--ob-radius-pill);
+  margin-top: var(--ob-gap-1); overflow: hidden;
+}
+.ob-destino__barra > span { display: block; height: 100%; background: var(--ob-accent); }
+.ob-destino--suelto { border-style: dashed; }
+.ob-destino--suelto .ob-destino__nombre { font-weight: var(--ob-fw-normal); color: var(--ob-ink-2); }
+
+/* El monto es el unico campo que se tipea, asi que es el mas grande de
+   toda la app. 16px o mas: abajo de eso iOS hace zoom al enfocar y te
+   descoloca la pantalla entera. */
+.ob-pagar__monto {
+  width: 100%;
+  font-size: 1.75rem;
+  padding: var(--ob-gap-3);
+  text-align: right;
+}
+.ob-pagar__fila { display: flex; gap: var(--ob-gap-2); margin-top: var(--ob-gap-3); }
+.ob-pagar__fila > * { flex: 1; min-height: 40px; }
+.ob-pagar__guardar { width: 100%; margin-top: var(--ob-gap-4); min-height: 46px; font-size: var(--ob-fs-md); }
+.ob-pagar__guardar:disabled { opacity: .45; cursor: not-allowed; }
+
+.ob-pagar__hecho {
+  display: grid; gap: var(--ob-gap-2);
+  padding: var(--ob-gap-4);
+  border: 1px solid var(--ob-ok);
+  background: var(--ob-ok-soft);
+  border-radius: var(--ob-radius);
+}
+.ob-pagar__hecho-titulo { font-weight: var(--ob-fw-semi); color: var(--ob-ok); }
+.ob-pagar__hecho-saldo  { font-size: var(--ob-fs-sm); color: var(--ob-ink); }
+.ob-pagar__hecho .ob-btn { justify-self: start; }

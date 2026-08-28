@@ -74,15 +74,18 @@ export default function Presupuesto() {
 
       {!borrador && (
         <div className="ob-tres">
-          <Numero rotulo="Nominal" valor={plata(t.nominal)}
-            pie="Lo que dice el papel del proveedor." />
           <Numero rotulo="Proyectado" valor={plata(t.proyectado)}
             resalta={t.diferencia > 0}
-            pie={t.cuotas_proyectadas > 0
-              ? `${t.cuotas_proyectadas} de ${t.cuotas} cuotas estimadas con IPC de ${num(d.proyeccion.variacion_mensual_usada, 1)} % mensual, la última variación publicada (${fecha(d.proyeccion.ultimo_mes_publicado)}).`
-              : 'Todas las cuotas tienen coeficiente publicado: no hay estimación.'} />
-          <Numero rotulo="Pagable hoy" valor={plata(t.real)}
-            pie="Solo las cuotas cuyo índice ya salió. Las demás no se suman: su coeficiente todavía no existe." />
+            pie={`Nominal ${plata(t.nominal)}, o sea ${plata(t.diferencia)} más. `
+              + (t.cuotas_proyectadas > 0
+                ? `${t.cuotas_proyectadas} de ${t.cuotas} cuotas estimadas con IPC de ${num(d.proyeccion.variacion_mensual_usada, 1)} % mensual, la última publicada (${fecha(d.proyeccion.ultimo_mes_publicado)}).`
+                : 'Todas las cuotas tienen coeficiente publicado.')} />
+          <Numero rotulo="Pagado" valor={plata(t.pagado)}
+            pie={t.avance_pago_pct
+              ? `Llevás pagado el ${num(t.avance_pago_pct, 1)} % de lo proyectado.`
+              : 'Todavía no se registró ningún pago contra este presupuesto.'} />
+          <Numero rotulo="Falta pagar" valor={plata(t.saldo)}
+            pie="Contra el proyectado, no contra el nominal: lo que falta de verdad incluye el ajuste." />
         </div>
       )}
 
@@ -151,6 +154,35 @@ export default function Presupuesto() {
             </tfoot>
           </table>
         </div>
+      )}
+
+      {d.pagos?.length > 0 && (
+        <>
+          <div className="ob-toolbar" style={{ borderTop: 'var(--ob-border)' }}>
+            <span className="ob-label">Pagos contra este presupuesto</span>
+          </div>
+          <div className="ob-tablewrap">
+            <table className="ob-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Medio</th><th>Notas</th><th className="ob-num">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.pagos.map((g) => (
+                  <tr key={g.id} style={g.anulado ? { opacity: .5 } : undefined}>
+                    <td>{fecha(g.fecha)}</td>
+                    <td className="ob-table__sec">{g.medio}</td>
+                    <td className="ob-table__sec">
+                      {g.anulado ? `anulado: ${g.anulado_motivo}` : (g.notas || '—')}
+                    </td>
+                    <td className="ob-num">{plata(g.monto)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <div style={{ padding: 'var(--ob-gap-4)' }}>

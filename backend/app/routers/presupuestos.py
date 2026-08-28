@@ -450,15 +450,31 @@ def ver(obra_id: str, presupuesto_id: str):
            FROM dbo.plan_tramo WHERE presupuesto_id = %s ORDER BY orden""",
         (presupuesto_id,))
 
+    pagos = db.query(
+        """SELECT id, fecha, monto, medio, notas, anulado
+           FROM dbo.pago WHERE presupuesto_id = %s ORDER BY fecha DESC""",
+        (presupuesto_id,))
+
     ancla = _ancla_ipc()
     niveles = _niveles_ipc()
     calculadas = _con_coeficientes(cuotas, p["fecha_base"], ancla, niveles)
+
+    total = _totales(calculadas)
+    pagado = sum((Decimal(str(g["monto"])) for g in pagos if not g["anulado"]), Decimal(0))
+    total["pagado"] = float(pagado)
+    # El saldo se calcula contra el proyectado y no contra el nominal: lo
+    # que falta pagar de verdad incluye el ajuste, que es el punto entero.
+    total["saldo"] = total["proyectado"] - float(pagado)
+    total["avance_pago_pct"] = (float(pagado) / total["proyectado"] * 100
+                                if total["proyectado"] else None)
 
     return {
         "presupuesto": {k: (str(v) if k == "id" else v) for k, v in p.items()},
         "tramos": tramos,
         "cuotas": [_serializar(c) for c in calculadas],
-        "total": _totales(calculadas),
+        "pagos": [{**g, "id": str(g["id"]), "monto": float(g["monto"]),
+                   "anulado": bool(g["anulado"])} for g in pagos],
+        "total": total,
         # Que hipotesis se uso para proyectar, dicho en la respuesta y no
         # escondido en el codigo. Si el numero no convence, aca esta el por que.
         "proyeccion": {
@@ -501,6 +517,12 @@ def resumen_por_rubro(obra_id: str):
            WHERE p.obra_id = %s AND p.estado = 'confirmado' AND c.estado <> 'anulada'""",
         (obra_id,))
 
+    # La tercera columna sale de su propia vista: un pago puede no tener
+    # presupuesto y aun asi pertenecer al rubro (decision 8 del plan).
+    pagos = {f["rubro_id"]: f for f in db.query(
+        "SELECT rubro_id, pagado, pagos, ultimo_pago FROM dbo.v_pagado_rubro WHERE obra_id = %s",
+        (obra_id,))}
+
     ancla = _ancla_ipc()
     niveles = _niveles_ipc()
 
@@ -525,13 +547,24 @@ def resumen_por_rubro(obra_id: str):
             else:
                 r["sin_coeficiente"] += 1
 
+    # Un rubro puede tener pagos sin tener presupuesto confirmado, asi que
+    # la union son las dos claves y no solo las del acumulado de cuotas.
+    for rubro_id in pagos:
+        acumulado.setdefault(rubro_id, {"nominal": Decimal(0), "proyectado": Decimal(0),
+                                        "real": Decimal(0), "cuotas": 0,
+                                        "sin_coeficiente": 0})
+
     return {
         "rubros": [{"rubro_id": k,
                     "nominal": float(v["nominal"]),
                     "proyectado": float(v["proyectado"]),
                     "real": float(v["real"]),
                     "cuotas": v["cuotas"],
-                    "sin_coeficiente": v["sin_coeficiente"]}
+                    "sin_coeficiente": v["sin_coeficiente"],
+                    "pagado": (float(pagos[k]["pagado"]) if k in pagos else None),
+                    "pagos": (pagos[k]["pagos"] if k in pagos else 0),
+                    "saldo": (float(v["proyectado"] - Decimal(str(pagos[k]["pagado"])))
+                              if k in pagos and v["proyectado"] else None)}
                    for k, v in acumulado.items()],
         "proyeccion": {
             "hay_ipc": ancla["hay"],

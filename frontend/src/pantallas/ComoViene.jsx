@@ -20,11 +20,18 @@ export default function ComoViene() {
   useEffect(() => {
     let vivo = true
     setDatos(null)
-    api.get(`/api/obras/${obra.id}/lista-materiales`)
-      .then((d) => { if (vivo) setDatos(d) })
+    Promise.all([
+      api.get(`/api/obras/${obra.id}/lista-materiales`),
+      api.get(`/api/obras/${obra.id}/rubros-resumen`),
+    ]).then(([lista, resumen]) => { if (vivo) setDatos({ lista, resumen }) })
       .catch((e) => { if (vivo) setError(e) })
     return () => { vivo = false }
   }, [obra.id, version])
+
+  const presupuestado = datos
+    ? datos.resumen.rubros.reduce((a, r) => a + r.proyectado, 0) : 0
+  const pagado = datos
+    ? datos.resumen.rubros.reduce((a, r) => a + (r.pagado ?? 0), 0) : 0
 
   return (
     <>
@@ -36,34 +43,40 @@ export default function ComoViene() {
 
       <div className="ob-tres">
         <Numero rotulo="Teorico"
-          valor={datos ? plata(datos.total) : null}
+          valor={datos ? plata(datos.lista.total) : null}
           pie={datos
             ? 'Computo por precio vigente. Solo materiales: la mano de obra todavia no se computa.'
             : 'Calculando…'} />
 
-        <Numero rotulo="Presupuestado" valor={null}
-          pie="Lo que te cotizaron, con su plan de pago. Todavia no hay donde cargarlo." />
+        <Numero rotulo="Presupuestado"
+          valor={presupuestado ? plata(presupuestado) : null}
+          pie={presupuestado
+            ? 'Proyectado de todos los presupuestos confirmados, con su plan de pago.'
+            : 'Lo que te cotizaron, con su plan de pago. Todavia no hay ninguno confirmado.'} />
 
-        <Numero rotulo="Pagado" valor={null}
-          pie="Lo que salio de la cuenta, con el coeficiente del mes en que se pago. Todavia no hay donde cargarlo." />
+        <Numero rotulo="Pagado"
+          valor={pagado ? plata(pagado) : null}
+          pie={pagado
+            ? `Salio de la cuenta. Falta pagar ${plata(presupuestado - pagado)}.`
+            : 'Lo que salio de la cuenta. Todavia no se registro ningun pago.'} />
       </div>
 
       <div className="ob-vacio">
-        <h2>Esta pantalla todavia no puede responder las preguntas que importa</h2>
+        <h2>Falta una de las tres preguntas</h2>
         <p>
-          Un rubro de obra no tiene un numero, tiene tres, y aca van a estar los
-          tres al lado con sus diferencias. Para que aparezcan falta:
+          Un rubro de obra no tiene un numero, tiene tres, y ya estan los tres
+          al lado. Con eso se contesta si te cotizaron caro y cuanto falta
+          pagar. Para la tercera falta:
         </p>
         <ul>
-          <li><b>Los presupuestos y sus planes de pago.</b> Sin eso no se puede
-            contestar si te cotizaron caro.</li>
-          <li><b>Los pagos.</b> Sin eso no se puede contestar cuanto falta pagar.</li>
-          <li><b>Las fechas.</b> Sin una sola fecha en la base no hay forma de
-            saber si estas pagando mas rapido de lo que la obra avanza.</li>
+          <li><b>Las fechas.</b> Sin una sola fecha de obra en la base no hay
+            forma de saber si estas pagando mas rapido de lo que la obra
+            avanza. Es la unica de las tres preguntas que todavia no se puede
+            contestar.</li>
         </ul>
         <p>
-          Mientras tanto, lo que ya funciona vive en las otras secciones: el
-          computo, la lista de compra que sale de el, y los precios.
+          El detalle por rubro, con los presupuestos y sus planes de pago,
+          esta en Rubros.
         </p>
       </div>
     </>
