@@ -26,6 +26,13 @@ export default function Materiales({ obra, alCambiar }) {
   }
   useEffect(() => { setFilas(null); cargar() }, [obra.id])
 
+  const cambiarTipo = async (material_id, tipo) => {
+    try {
+      await api.put(`/api/obras/${obra.id}/materiales/${material_id}/tipo`, { tipo })
+      await cargar(); alCambiar?.()
+    } catch (e) { setError(e) }
+  }
+
   const editar = async (id, campos) => {
     try { await api.patch(`/api/obras/${obra.id}/materiales/${id}`, campos); await cargar(); alCambiar?.() }
     catch (e) { setError(e) }
@@ -76,7 +83,7 @@ export default function Materiales({ obra, alCambiar }) {
           <thead>
             <tr>
               <th className="ob-table__gutter"></th>
-              <th>Material</th><th>Marca</th><th>Un.</th>
+              <th>Material</th><th>Como se computa</th><th>Marca</th><th>Un.</th>
               <th>Presentacion</th>
               <th className="ob-num">Contenido</th>
               <th className="ob-num">Precio</th>
@@ -96,6 +103,17 @@ export default function Materiales({ obra, alCambiar }) {
                     <Editable valor={m.nombre} alGuardar={(v) => editar(m.id, { nombre: v })} />
                     {m.propio ? <span className="ob-chip ob-chip--ok" style={{ marginLeft: '.4rem' }}>propio</span>
                       : m.editado ? <span className="ob-chip ob-chip--mudo" style={{ marginLeft: '.4rem' }}>editado</span> : null}
+                  </td>
+                  <td>
+                    {/* Por rendimiento sale del coeficiente de una tarea;
+                        por cantidad se carga directo en el computo. Un caño
+                        no tiene "consumo por m2", tiene una cantidad. */}
+                    <select className="ob-input" value={m.tipo}
+                      style={{ padding: '.1rem .3rem', fontSize: 'var(--ob-fs-xs)' }}
+                      onChange={(e) => cambiarTipo(m.id, e.target.value)}>
+                      <option value="rendimiento">por rendimiento</option>
+                      <option value="cantidad">por cantidad</option>
+                    </select>
                   </td>
                   <td><Editable valor={m.marca} alGuardar={(v) => editar(m.id, { marca: v })} vacio="sin marca" /></td>
                   <td className="ob-table__sec">{m.unidad_consumo}</td>

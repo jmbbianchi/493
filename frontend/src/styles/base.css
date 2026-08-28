@@ -443,3 +443,26 @@ body {
 .ob-pagar__hecho-titulo { font-weight: var(--ob-fw-semi); color: var(--ob-ok); }
 .ob-pagar__hecho-saldo  { font-size: var(--ob-fs-sm); color: var(--ob-ink); }
 .ob-pagar__hecho .ob-btn { justify-self: start; }
+
+/* ---------- costo de mano de obra de una tarea ----------
+   Va arriba de los rendimientos y no como una columna mas de la tabla:
+   el rendimiento es por material y esto es por tarea. Meterlo en la
+   tabla lo haria parecer un material mas. */
+.ob-manoobra {
+  margin: var(--ob-gap-4) var(--ob-gap-4) 0;
+  padding: var(--ob-gap-3) var(--ob-gap-4);
+  background: var(--ob-surface);
+  border: var(--ob-border);
+  border-radius: var(--ob-radius);
+}
+.ob-manoobra__cifra {
+  display: flex; align-items: baseline; gap: var(--ob-gap-2);
+  margin-top: var(--ob-gap-1);
+  font-size: var(--ob-fs-lg);
+}
+.ob-manoobra__unidad { font-size: var(--ob-fs-xs); color: var(--ob-ink-3); }
+.ob-manoobra__pie {
+  margin: var(--ob-gap-2) 0 0;
+  font-size: var(--ob-fs-xs); color: var(--ob-ink-3);
+  max-width: 46rem;
+}

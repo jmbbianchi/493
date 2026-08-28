@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import * as api from '../api'
 import Editable from '../componentes/Editable'
 import Aviso from '../componentes/Aviso'
-import { num } from '../formato'
+import { num, plata } from '../formato'
 
 /**
  * Los rendimientos: cuanto consume cada tarea de cada material.
@@ -36,6 +36,17 @@ export default function Rendimientos({ obra, alCambiar }) {
     } catch (e) { setError(e) }
   }
 
+  const guardarCostoMO = async (valor) => {
+    try {
+      await api.put(`/api/obras/${obra.id}/tareas/${elegida.id}/costo-mano-obra`,
+        { costo_mo: valor })
+      const t = await api.get(`/api/obras/${obra.id}/tareas`)
+      setTareas(t)
+      setElegida(t.find((x) => x.id === elegida.id) || elegida)
+      alCambiar?.()
+    } catch (e) { setError(e) }
+  }
+
   const restaurar = async (material_id) => {
     try {
       await api.borrar(`/api/obras/${obra.id}/tareas/${elegida.id}/rendimientos/${material_id}`)
@@ -57,6 +68,27 @@ export default function Rendimientos({ obra, alCambiar }) {
           {elegida ? `Consumo por ${elegida.unidad_medicion} de tarea` : ''}
         </span>
       </div>
+
+      {elegida && (
+        <div className="ob-manoobra">
+          <span className="ob-label">Mano de obra</span>
+          <div className="ob-manoobra__cifra">
+            <Editable valor={elegida.costo_mo} formato="numero" decimales={2}
+              alGuardar={guardarCostoMO} />
+            <span className="ob-manoobra__unidad">por {elegida.unidad_medicion}</span>
+            {elegida.costo_mo_propio ? (
+              <span className="ob-chip ob-chip--mudo">ajustado en esta obra</span>
+            ) : null}
+          </div>
+          <p className="ob-manoobra__pie">
+            {elegida.costo_mo == null
+              ? 'Sin cargar. La mano de obra es cerca de la mitad del costo de una obra: '
+                + 'mientras esté vacío, el teórico de este rubro es de menos.'
+              : `Con lo computado, esta tarea suma ${plata(elegida.costo_mo)} por `
+                + `${elegida.unidad_medicion} al teórico del rubro.`}
+          </p>
+        </div>
+      )}
 
       {!filas ? (
         <p style={{ padding: 'var(--ob-gap-4)', color: 'var(--ob-ink-3)' }}>Cargando rendimientos…</p>

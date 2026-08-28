@@ -45,7 +45,11 @@ export default function ComoViene() {
         <Numero rotulo="Teorico"
           valor={datos ? plata(datos.lista.total) : null}
           pie={datos
-            ? 'Computo por precio vigente. Solo materiales: la mano de obra todavia no se computa.'
+            ? `Materiales ${plata(datos.lista.total_materiales)} + mano de obra `
+              + `${plata(datos.lista.total_mano_obra)}. `
+              + (datos.lista.sin_costo_mano_obra.length
+                ? `${datos.lista.sin_costo_mano_obra.length} tareas sin costo de mano de obra cargado: el numero es de menos.`
+                : 'Todas las tareas tienen costo cargado.')
             : 'Calculando…'} />
 
         <Numero rotulo="Presupuestado"

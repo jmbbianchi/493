@@ -31,11 +31,8 @@ export default function RubroDetalle() {
       setRubro(rubros.find((r) => String(r.id) === String(rubroId)) || null)
       setPresupuestos(pres)
       setResumen(res.rubros.find((r) => String(r.rubro_id) === String(rubroId)) || null)
-      const mio = lista.filas.filter((f) => f.rubro === rubros.find(
-        (r) => String(r.id) === String(rubroId))?.nombre)
-      const conPrecio = mio.filter((f) => f.subtotal != null)
-      setTeorico(conPrecio.length
-        ? conPrecio.reduce((a, f) => a + Number(f.subtotal), 0) : null)
+      const nombre = rubros.find((r) => String(r.id) === String(rubroId))?.nombre
+      setTeorico(lista.rubros.find((r) => r.rubro === nombre) || null)
     } catch (e) { setError(e) }
   }
 
@@ -54,25 +51,29 @@ export default function RubroDetalle() {
       </div>
 
       <div className="ob-tres">
-        <Numero rotulo="Teórico" valor={teorico == null ? null : plata(teorico)}
-          pie={teorico == null
-            ? 'Ningún material de este rubro tiene precio cargado.'
-            : 'Cómputo por precio vigente. Solo materiales.'} />
+        <Numero rotulo="Teórico" valor={teorico?.hay ? plata(teorico.total) : null}
+          pie={!teorico?.hay
+            ? 'Nada de este rubro tiene precio ni costo de mano de obra cargado.'
+            : `Materiales ${plata(teorico.materiales)} + mano de obra ${plata(teorico.mano_obra)}.`
+              + (teorico.completo ? '' :
+                ` Faltan ${teorico.falta_precio + teorico.falta_costo_mo} datos: el número es de menos.`)} />
         <Numero rotulo="Presupuestado" valor={presupuestado == null ? null : plata(presupuestado)}
           pie={presupuestado == null
             ? 'Todavía no hay ningún presupuesto confirmado en este rubro.'
             : `Proyectado sobre ${resumen.cuotas} cuotas. Nominal ${plata(resumen.nominal)}.`} />
-        <Numero rotulo="Pagado" valor={null}
-          pie="Llega cuando se puedan registrar los pagos." />
+        <Numero rotulo="Pagado" valor={resumen?.pagado == null ? null : plata(resumen.pagado)}
+          pie={resumen?.pagado == null
+            ? 'Todavía no se registró ningún pago en este rubro.'
+            : `Falta pagar ${plata(resumen.saldo)} · ${resumen.pagos} pago(s).`} />
       </div>
 
-      {teorico != null && presupuestado != null && (
+      {teorico?.hay && presupuestado != null && (
         <p className="ob-nota">
           Te cotizaron{' '}
-          <b className={`ob-delta--${presupuestado > teorico ? 'sube' : 'baja'}`}>
-            {presupuestado > teorico ? 'más caro' : 'más barato'} que el cómputo
-            por {plata(Math.abs(presupuestado - teorico))}
-            {' '}({num((presupuestado / teorico - 1) * 100, 1)} %)
+          <b className={`ob-delta--${presupuestado > teorico.total ? 'sube' : 'baja'}`}>
+            {presupuestado > teorico.total ? 'más caro' : 'más barato'} que el cómputo
+            por {plata(Math.abs(presupuestado - teorico.total))}
+            {' '}({num((presupuestado / teorico.total - 1) * 100, 1)} %)
           </b>.
         </p>
       )}

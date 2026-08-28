@@ -29,6 +29,7 @@ SELECT m.id,
        COALESCE(om.unidades_x_pres, m.unidades_x_pres)   AS unidades_x_pres,
        COALESCE(om.desperdicio_pct, m.desperdicio_pct)   AS desperdicio_pct,
        r.nombre                                          AS rubro,
+       m.tipo,
        CASE WHEN m.obra_id IS NULL THEN 0 ELSE 1 END     AS propio,
        CASE WHEN om.material_id IS NULL THEN 0 ELSE 1 END AS editado,
        pv.importe        AS precio,
@@ -135,7 +136,9 @@ SELECT t.id,
        t.unidad_medicion,
        r.nombre                                           AS rubro,
        r.orden                                            AS rubro_orden,
-       CASE WHEN t.obra_id IS NULL THEN 0 ELSE 1 END      AS propia
+       CASE WHEN t.obra_id IS NULL THEN 0 ELSE 1 END      AS propia,
+       COALESCE(ot.costo_mo, t.costo_mo)                  AS costo_mo,
+       CASE WHEN ot.costo_mo IS NULL THEN 0 ELSE 1 END    AS costo_mo_propio
 FROM dbo.tarea_tipo t
 JOIN dbo.rubro r ON r.id = t.rubro_id
 LEFT JOIN dbo.obra_tarea ot ON ot.obra_id = %s AND ot.tarea_tipo_id = t.id
@@ -268,3 +271,78 @@ def historial_precios(obra_id: str, material_id: int):
 @router.get("/rubros")
 def rubros(obra_id: str):
     return db.query("SELECT id, nombre, orden FROM dbo.rubro ORDER BY orden")
+
+
+# ─────────────────────────────────────────── mano de obra
+
+class CostoManoObra(BaseModel):
+    # None borra el override y devuelve la tarea al valor de biblioteca.
+    costo_mo: float | None = Field(default=None, ge=0)
+
+
+@router.put("/tareas/{tarea_id}/costo-mano-obra")
+def guardar_costo_mo(obra_id: str, tarea_id: int, c: CostoManoObra):
+    """El costo de mano de obra por unidad de la tarea, para ESTA obra.
+
+    Se pisa por obra igual que el rendimiento: el albanil de una obra no
+    cobra lo mismo que el de otra, y la biblioteca no se toca nunca desde
+    la pantalla de una obra.
+    """
+    existe = db.query(
+        "SELECT 1 AS x FROM dbo.obra_tarea WHERE obra_id = %s AND tarea_tipo_id = %s",
+        (obra_id, tarea_id))
+    if existe:
+        db.execute(
+            "UPDATE dbo.obra_tarea SET costo_mo = %s WHERE obra_id = %s AND tarea_tipo_id = %s",
+            (c.costo_mo, obra_id, tarea_id))
+    else:
+        db.execute(
+            """INSERT INTO dbo.obra_tarea (obra_id, tarea_tipo_id, costo_mo)
+               VALUES (%s, %s, %s)""", (obra_id, tarea_id, c.costo_mo))
+    return {"ok": True}
+
+
+class TipoMaterial(BaseModel):
+    tipo: str = Field(pattern="^(rendimiento|cantidad)$")
+
+
+@router.put("/materiales/{material_id}/tipo")
+def cambiar_tipo(obra_id: str, material_id: int, t: TipoMaterial):
+    """Rendimiento o cantidad.
+
+    OJO: esto SI toca la biblioteca global, a diferencia de todo lo demas
+    de esta pantalla. Es a proposito: que un caño se compute por cantidad
+    no es una particularidad de una obra, es lo que es un caño. Si un dia
+    hay varias cuentas de arquitectos, esto pasa a ser por obra.
+    """
+    db.execute("UPDATE dbo.material SET tipo = %s WHERE id = %s", (t.tipo, material_id))
+    return {"ok": True}
+
+
+class TareaNueva(BaseModel):
+    codigo: str = Field(min_length=1, max_length=32)
+    nombre: str = Field(min_length=1, max_length=200)
+    rubro_id: int
+    unidad_medicion: str = Field(min_length=1, max_length=8)
+    costo_mo: float | None = Field(default=None, ge=0)
+
+
+@router.post("/tareas", status_code=201)
+def crear_tarea(obra_id: str, t: TareaNueva):
+    """Tarea propia de la obra. No toca la biblioteca de nadie.
+
+    Decision 2 del plan: material, tarea y rendimiento se pueden agregar
+    por obra. El material ya se podia; la tarea no, y sin eso un rubro que
+    la biblioteca no cubre -- plomeria, por ejemplo -- no se puede computar.
+    """
+    ya = db.query("SELECT id FROM dbo.tarea_tipo WHERE obra_id = %s AND codigo = %s",
+                  (obra_id, t.codigo))
+    if ya:
+        raise HTTPException(409, f"Ya existe una tarea con el codigo {t.codigo} en esta obra.")
+    db.execute(
+        """INSERT INTO dbo.tarea_tipo (codigo, nombre, rubro_id, unidad_medicion, costo_mo, obra_id)
+           VALUES (%s,%s,%s,%s,%s,%s)""",
+        (t.codigo, t.nombre, t.rubro_id, t.unidad_medicion, t.costo_mo, obra_id))
+    return db.query(TAREAS.replace("ORDER BY r.orden, nombre",
+                                   "AND t.codigo = %s AND t.obra_id = %s"),
+                    (obra_id, obra_id, t.codigo, obra_id))[0]

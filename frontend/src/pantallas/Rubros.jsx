@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useOutletContext, Link } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
-import { plata, num, porGrupo } from '../formato'
+import { plata, num } from '../formato'
 
 /**
  * La columna vertebral de la app: un renglón por rubro con los tres números
@@ -34,18 +34,12 @@ export default function Rubros() {
 
   const { lista, rubros, resumen } = datos
 
-  // Un material sin precio no suma. Si NINGUNO del rubro tiene precio, el
-  // teorico no es cero: es desconocido, y hay que decirlo con una raya.
-  // Mostrar $ 0,00 ahi se lee como "este rubro no cuesta nada", que es
-  // justo el error que la app existe para no cometer.
-  const porNombre = new Map(porGrupo(lista.filas, 'rubro').map((g) => {
-    const conPrecio = g.filas.filter((f) => f.subtotal != null)
-    return [g.nombre, {
-      monto: conPrecio.reduce((a, f) => a + Number(f.subtotal), 0),
-      completo: conPrecio.length === g.filas.length,
-      hay: conPrecio.length > 0,
-    }]
-  }))
+  // El teorico por rubro lo calcula el backend: materiales mas mano de
+  // obra, con la marca de si el numero esta completo. Antes cada pantalla
+  // lo reagrupaba por su cuenta y hacian tres cuentas distintas para lo
+  // mismo. Un rubro sin ningun dato conocido va con raya y no con cero:
+  // no es que no cueste nada, es que no se sabe.
+  const porNombre = new Map(lista.rubros.map((r) => [r.rubro, r]))
   const porId = new Map(resumen.rubros.map((r) => [String(r.rubro_id), r]))
 
   // Solo los rubros que tienen algo. Listar los trece siempre convierte la
@@ -54,7 +48,7 @@ export default function Rubros() {
     .map((r) => ({ ...r, t: porNombre.get(r.nombre), p: porId.get(String(r.id)) }))
     .filter((r) => r.t || r.p)
 
-  const totalT = filas.reduce((a, r) => a + (r.t?.hay ? r.t.monto : 0), 0)
+  const totalT = filas.reduce((a, r) => a + (r.t?.hay ? r.t.total : 0), 0)
   const totalP = filas.reduce((a, r) => a + (r.p ? r.p.proyectado : 0), 0)
   const hayPresupuestos = filas.some((r) => r.p)
 
@@ -68,16 +62,17 @@ export default function Rubros() {
 
   const comparables = filas.filter((r) => r.t?.hay && r.p)
   const difTotal = comparables.length
-    ? comparables.reduce((a, r) => a + (r.p.proyectado - r.t.monto), 0) : null
+    ? comparables.reduce((a, r) => a + (r.p.proyectado - r.t.total), 0) : null
 
   return (
     <>
       <div className="ob-toolbar">
         <span className="ob-label">Rubros</span>
         <span className="ob-toolbar__meta">
+          {`Teórico = materiales ${plata(lista.total_materiales)} + mano de obra ${plata(lista.total_mano_obra)}`}
           {hayPresupuestos
-            ? `El presupuestado es el proyectado, con IPC de ${num(resumen.proyeccion.variacion_mensual_usada, 1)} % mensual donde el índice todavía no salió`
-            : 'El teórico sale del cómputo · todavía no hay ningún presupuesto cargado'}
+            ? ` · presupuestado con IPC de ${num(resumen.proyeccion.variacion_mensual_usada, 1)} % mensual donde el índice no salió`
+            : ' · todavía no hay ningún presupuesto cargado'}
         </span>
       </div>
 
@@ -96,7 +91,7 @@ export default function Rubros() {
           </thead>
           <tbody>
             {filas.map((r, i) => {
-              const t = r.t?.hay ? r.t.monto : null
+              const t = r.t?.hay ? r.t.total : null
               const p = r.p ? r.p.proyectado : null
               const dif = t != null && p != null ? p - t : null
               return (
@@ -105,8 +100,11 @@ export default function Rubros() {
                   <td className="ob-table__strong">
                     <Link to={`/obra/${obra.id}/rubros/${r.id}`}>{r.nombre}</Link>
                     {r.t && !r.t.completo && (
-                      <span className="ob-chip ob-chip--warn" style={{ marginLeft: '.4rem' }}>
-                        {r.t.hay ? 'parcial' : 'sin precios'}
+                      <span className="ob-chip ob-chip--warn" style={{ marginLeft: '.4rem' }}
+                        title={[r.t.falta_precio && `${r.t.falta_precio} sin precio`,
+                          r.t.falta_costo_mo && `${r.t.falta_costo_mo} sin costo de mano de obra`]
+                          .filter(Boolean).join(' · ')}>
+                        {r.t.hay ? 'de menos' : 'sin datos'}
                       </span>
                     )}
                   </td>
