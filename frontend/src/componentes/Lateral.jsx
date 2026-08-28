@@ -11,11 +11,13 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 // El orden es el del plan y no es alfabetico: primero como viene la obra,
 // despues la plata por rubro, y al final las herramientas de calculo.
 const SECCIONES = [
-  // Pagar va primero y no ultimo. Es lo unico que se usa parado en la
-  // obra con el telefono, y en el telefono la lateral es una tira
-  // horizontal: lo que esta al final hay que scrollearlo para llegar.
-  ['pagar', 'Pagar'],
-  ['como-viene', 'Como viene'],
+  // El orden lo fijo el usuario el 28-ago-2026: primero el proyecto, que
+  // es la vista de entrada, y segundo el registro de pago, que es lo unico
+  // que se usa parado en la obra con el telefono. En el telefono la
+  // lateral es una tira horizontal, asi que lo que esta al final hay que
+  // scrollearlo: por eso pagar no puede caer abajo.
+  ['como-viene', 'Proyecto'],
+  ['pagar', 'Registrar Pago'],
   ['rubros', 'Rubros'],
   ['computo', 'Computo'],
   ['lista', 'Lista de compra'],
