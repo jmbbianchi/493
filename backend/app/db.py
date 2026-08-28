@@ -70,3 +70,25 @@ def execute(sql: str, params: tuple = ()) -> int:
     with cursor() as cur:
         cur.execute(sql, params)
         return cur.rowcount
+
+
+def execute_many(sql: str, filas, lote: int = 1000) -> int:
+    """Muchas filas con pocas conexiones.
+
+    execute() abre y cierra una conexion por llamada, que esta bien para
+    una operacion suelta del frontend y es catastrofico para cargar la
+    historia de indices: 20.000 valores serian 20.000 conexiones.
+
+    Agrupa de a `lote` en una sola conexion. No usa una unica transaccion
+    gigante a proposito: si se corta a mitad de camino, lo ya cargado
+    queda, y como todo entra por MERGE la proxima corrida completa el
+    resto sin duplicar nada.
+    """
+    filas = list(filas)
+    n = 0
+    for i in range(0, len(filas), lote):
+        with cursor() as cur:
+            for p in filas[i:i + lote]:
+                cur.execute(sql, p)
+                n += 1
+    return n
