@@ -30,7 +30,19 @@ export default function Rubros() {
   if (!datos) return <p className="ob-cargando">Calculando…</p>
 
   const grupos = porGrupo(datos.filas, 'rubro')
-  const teorico = (g) => g.filas.reduce((a, f) => a + (f.subtotal == null ? 0 : Number(f.subtotal)), 0)
+
+  // Un material sin precio no suma. Si NINGUNO del rubro tiene precio, el
+  // teorico no es cero: es desconocido, y hay que decirlo con una raya.
+  // Mostrar $ 0,00 ahi se lee como "este rubro no cuesta nada", que es
+  // justo el error que la app existe para no cometer.
+  const teorico = (g) => {
+    const conPrecio = g.filas.filter((f) => f.subtotal != null)
+    return {
+      monto: conPrecio.reduce((a, f) => a + Number(f.subtotal), 0),
+      completo: conPrecio.length === g.filas.length,
+      hay: conPrecio.length > 0,
+    }
+  }
 
   return (
     <>
@@ -54,16 +66,28 @@ export default function Rubros() {
             </tr>
           </thead>
           <tbody>
-            {grupos.map((g, i) => (
+            {grupos.map((g, i) => {
+              const t = teorico(g)
+              return (
               <tr key={g.nombre}>
                 <td className="ob-table__gutter">{i + 1}</td>
-                <td className="ob-table__strong">{g.nombre}</td>
-                <td className="ob-num">{plata(teorico(g))}</td>
+                <td className="ob-table__strong">
+                  {g.nombre}
+                  {!t.completo && (
+                    <span className="ob-chip ob-chip--warn" style={{ marginLeft: '.4rem' }}>
+                      {t.hay ? 'parcial' : 'sin precios'}
+                    </span>
+                  )}
+                </td>
+                <td className={`ob-num${t.hay ? '' : ' ob-table__sec'}`}>
+                  {t.hay ? plata(t.monto) : '—'}
+                </td>
                 <td className="ob-num ob-table__sec">—</td>
                 <td className="ob-num ob-table__sec">—</td>
                 <td className="ob-num ob-table__sec">—</td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
           <tfoot>
             <tr>
