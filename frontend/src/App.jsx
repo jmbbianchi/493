@@ -1,24 +1,18 @@
 import { useEffect, useState } from 'react'
+import { Navigate, Route, Routes, useOutletContext } from 'react-router-dom'
 import * as api from './api'
+import Layout from './Layout'
+import ComoViene from './pantallas/ComoViene'
+import Rubros from './pantallas/Rubros'
 import Computo from './pantallas/Computo'
 import Lista from './pantallas/Lista'
 import Materiales from './pantallas/Materiales'
 import Rendimientos from './pantallas/Rendimientos'
 import Aviso from './componentes/Aviso'
-import { num } from './formato'
-
-const PESTANIAS = [
-  ['computo', 'Computo'],
-  ['lista', 'Lista de compra'],
-  ['materiales', 'Materiales y precios'],
-  ['rendimientos', 'Rendimientos'],
-]
 
 export default function App() {
   const [autorizado, setAutorizado] = useState(api.hayClave())
   const [obras, setObras] = useState(null)
-  const [obraId, setObraId] = useState(null)
-  const [pestania, setPestania] = useState('computo')
   const [error, setError] = useState(null)
   const [indices, setIndices] = useState([])
   // Cambia cada vez que se toca algo que afecta la lista de compra.
@@ -26,9 +20,7 @@ export default function App() {
 
   const cargarObras = async () => {
     try {
-      const o = await api.get('/api/obras')
-      setObras(o)
-      setObraId((prev) => prev || o[0]?.id || null)
+      setObras(await api.get('/api/obras'))
     } catch (e) {
       if (e.clave) { api.olvidarClave(); setAutorizado(false) } else setError(e)
     }
@@ -44,55 +36,40 @@ export default function App() {
   }, [])
 
   if (!autorizado) return <Puerta alEntrar={() => setAutorizado(true)} />
+  if (error && obras === null) return <Aviso error={error} />
+  // La primera consulta despues del auto-pause tarda unos 40 segundos.
+  if (obras === null) return <p className="ob-cargando">Despertando la base…</p>
+  if (obras.length === 0) return <PrimeraObra alCrear={cargarObras} />
 
-  const obra = obras?.find((o) => o.id === obraId) || null
+  const inicio = `/obra/${obras[0].id}/como-viene`
   const tocado = () => setVersion((v) => v + 1)
 
   return (
-    <div>
-      <header className="ob-topbar">
-        <span className="ob-topbar__marca">obra493</span>
-        {obras?.length > 1 ? (
-          <select className="ob-input" value={obraId ?? ''}
-            onChange={(e) => setObraId(e.target.value)}>
-            {obras.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
-          </select>
-        ) : (
-          <span className="ob-topbar__ruta">
-            {obra ? [obra.nombre, obra.nomenclatura,
-              obra.sup_cubierta ? `${num(obra.sup_cubierta, 2)} m2 cubiertos` : null]
-              .filter(Boolean).join(' · ') : ''}
-          </span>
-        )}
-        <span className="ob-topbar__fx ob-num">
-          {indices.map((i) => `${i.c === 'UVA' ? 'UVA' : 'USD'} ${num(i.valor, 2)}`).join('  ·  ')}
-        </span>
-      </header>
-
-      {obras === null ? (
-        <p style={{ padding: 'var(--ob-gap-4)', color: 'var(--ob-ink-3)' }}>Despertando la base…</p>
-      ) : obras.length === 0 ? (
-        <PrimeraObra alCrear={cargarObras} />
-      ) : (
-        <>
-          <nav className="ob-tabs">
-            {PESTANIAS.map(([id, texto]) => (
-              <button key={id} className="ob-tabs__item"
-                aria-current={pestania === id ? 'page' : undefined}
-                onClick={() => setPestania(id)}>{texto}</button>
-            ))}
-          </nav>
-
-          <Aviso error={error} alCerrar={() => setError(null)} />
-
-          {obra && pestania === 'computo' && <Computo obra={obra} alCambiar={tocado} />}
-          {obra && pestania === 'lista' && <Lista obra={obra} version={version} />}
-          {obra && pestania === 'materiales' && <Materiales obra={obra} alCambiar={tocado} />}
-          {obra && pestania === 'rendimientos' && <Rendimientos obra={obra} alCambiar={tocado} />}
-        </>
-      )}
-    </div>
+    <Routes>
+      <Route path="/obra/:obraId"
+        element={<Layout obras={obras} indices={indices} version={version} tocado={tocado} />}>
+        <Route index element={<Navigate to="como-viene" replace />} />
+        <Route path="como-viene" element={<ComoViene />} />
+        <Route path="rubros" element={<Rubros />} />
+        <Route path="computo" element={<ConObra Pantalla={Computo} />} />
+        <Route path="lista" element={<ConObra Pantalla={Lista} />} />
+        <Route path="materiales" element={<ConObra Pantalla={Materiales} />} />
+        <Route path="rendimientos" element={<ConObra Pantalla={Rendimientos} />} />
+      </Route>
+      <Route path="*" element={<Navigate to={inicio} replace />} />
+    </Routes>
   )
+}
+
+/**
+ * Adaptador para las cuatro pantallas que ya existian: siguen recibiendo
+ * `obra`, `version` y `alCambiar` por props, sin enterarse del router.
+ * Cuando cambia la obra se remonta la pantalla (key), asi ninguna se queda
+ * mostrando los datos de la obra anterior mientras carga los nuevos.
+ */
+function ConObra({ Pantalla }) {
+  const { obra, version, tocado } = useOutletContext()
+  return <Pantalla key={obra.id} obra={obra} version={version} alCambiar={tocado} />
 }
 
 /** Candado temporal. Se saca el dia que entre el login con Entra. */
@@ -108,7 +85,7 @@ function Puerta({ alEntrar }) {
   }
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', padding: 'var(--ob-gap-4)' }}>
+    <div className="ob-centrado">
       <form onSubmit={entrar} className="ob-card"
         style={{ padding: 'var(--ob-gap-6)', width: 'min(26rem, 100%)' }}>
         <h1 style={{ margin: 0, fontSize: 'var(--ob-fs-2xl)', letterSpacing: '-0.02em' }}>obra493</h1>

@@ -18,6 +18,7 @@ dist/
 .vite/
 
 # editores / SO
+.claude/
 .vscode/
 .idea/
 .DS_Store

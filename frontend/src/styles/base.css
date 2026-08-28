@@ -221,3 +221,134 @@ body {
   color: var(--ob-ink);
 }
 .ob-table tbody tr.ob-grupo:hover td { background: var(--ob-surface-2); }
+
+/* ============================================================
+   El caparazon: dos columnas, barra lateral fija.
+   Cada columna scrollea por su cuenta. El <body> no scrollea nunca:
+   si lo hiciera, la barra lateral se iria de pantalla al bajar por una
+   tabla larga, que es justo lo que tiene que no pasar.
+   ============================================================ */
+.ob-app {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  height: 100%;
+}
+
+.ob-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ob-gap-4);
+  padding: var(--ob-gap-4) 0;
+  background: var(--ob-surface);
+  border-right: var(--ob-border);
+  overflow-y: auto;
+}
+.ob-lateral__marca {
+  padding: 0 var(--ob-gap-4);
+  font-weight: var(--ob-fw-bold);
+  font-size: var(--ob-fs-lg);
+  letter-spacing: -0.01em;
+}
+.ob-lateral__obra {
+  display: grid;
+  gap: var(--ob-gap-1);
+  padding: 0 var(--ob-gap-4);
+}
+.ob-lateral__select { width: 100%; }
+
+.ob-lateral__nav { display: flex; flex-direction: column; }
+.ob-nav__item {
+  padding: var(--ob-gap-2) var(--ob-gap-4);
+  font-size: var(--ob-fs-sm);
+  color: var(--ob-ink-2);
+  text-decoration: none;
+  /* El borde izquierdo esta siempre, transparente: si apareciera recien al
+     activarse, el texto se correria 2 px en cada click. */
+  border-left: 2px solid transparent;
+  transition: background var(--ob-t-fast), color var(--ob-t-fast);
+}
+.ob-nav__item:hover { background: var(--ob-surface-2); color: var(--ob-ink); }
+.ob-nav__item[aria-current="page"] {
+  background: var(--ob-accent-soft);
+  border-left-color: var(--ob-accent);
+  color: var(--ob-accent);
+  font-weight: var(--ob-fw-semi);
+}
+
+.ob-contenido { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.ob-pantalla  { flex: 1; overflow-y: auto; }
+
+/* ---------- estados de espera y notas ---------- */
+.ob-cargando { padding: var(--ob-gap-4); color: var(--ob-ink-3); }
+.ob-nota     { padding: 0 var(--ob-gap-4); font-size: var(--ob-fs-sm); color: var(--ob-ink-2); }
+.ob-centrado { display: grid; place-items: center; min-height: 100vh; padding: var(--ob-gap-4); }
+
+/* ---------- los tres numeros ----------
+   Teorico, presupuestado y pagado, siempre uno al lado del otro y siempre
+   los tres, aunque falten dos. Ver los huecos es parte del argumento. */
+.ob-tres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--ob-gap-4);
+  padding: var(--ob-gap-4);
+}
+.ob-tres__uno { padding: var(--ob-gap-4); }
+.ob-tres__valor {
+  font-size: var(--ob-fs-2xl);
+  font-weight: var(--ob-fw-semi);
+  text-align: left;
+  margin-top: var(--ob-gap-1);
+}
+.ob-tres__valor--falta { color: var(--ob-ink-3); font-weight: var(--ob-fw-normal); }
+.ob-tres__pie {
+  margin: var(--ob-gap-2) 0 0;
+  font-size: var(--ob-fs-xs);
+  color: var(--ob-ink-3);
+  line-height: var(--ob-lh-normal);
+}
+
+/* ---------- estado vacio con contenido ----------
+   Un vacio que explica que va a haber ahi y que falta cargar. Un "no hay
+   datos" a secas no le dice a nadie que tiene que hacer. */
+.ob-vacio {
+  margin: 0 var(--ob-gap-4) var(--ob-gap-6);
+  padding: var(--ob-gap-4);
+  border-left: 2px solid var(--ob-line-strong);
+  max-width: 46rem;
+  color: var(--ob-ink-2);
+  font-size: var(--ob-fs-sm);
+  line-height: var(--ob-lh-prose);
+}
+.ob-vacio h2 { margin: 0 0 var(--ob-gap-2); font-size: var(--ob-fs-lg); color: var(--ob-ink); }
+.ob-vacio p  { margin: 0 0 var(--ob-gap-2); }
+.ob-vacio ul { margin: 0 0 var(--ob-gap-2); padding-left: 1.1rem; }
+.ob-vacio li { margin-bottom: var(--ob-gap-1); }
+
+/* ---------- telefono ----------
+   La pantalla de carga de pagos va a ser mobile-first en su etapa. Esto es
+   solo para que el caparazon no quede inservible en un telefono mientras
+   tanto: la lateral pasa a ser una tira arriba. */
+@media (max-width: 760px) {
+  .ob-app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: 100%; }
+  .ob-lateral {
+    flex-direction: row; align-items: center; gap: var(--ob-gap-3);
+    padding: var(--ob-gap-2) var(--ob-gap-3);
+    border-right: none; border-bottom: var(--ob-border);
+    overflow-x: auto; overflow-y: hidden;
+  }
+  .ob-lateral__marca { display: none; }
+  /* Sin ancho minimo el select se aplasta hasta quedar en la flechita:
+     el flex reparte el sobrante y la tira de secciones se lo lleva todo. */
+  .ob-lateral__obra  { padding: 0; flex: 0 0 auto; min-width: 9rem; }
+  .ob-lateral__obra .ob-label { display: none; }
+  .ob-lateral__nav   { flex-direction: row; }
+  .ob-nav__item {
+    white-space: nowrap;
+    padding: var(--ob-gap-2);
+    border-left: none; border-bottom: 2px solid transparent;
+  }
+  .ob-nav__item[aria-current="page"] {
+    background: none; border-bottom-color: var(--ob-accent);
+  }
+  .ob-topbar__ruta { display: none; }
+}
