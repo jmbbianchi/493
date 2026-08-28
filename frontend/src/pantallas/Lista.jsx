@@ -28,6 +28,21 @@ export default function Lista({ obra, version }) {
   if (!datos) return <p style={{ padding: 'var(--ob-gap-4)', color: 'var(--ob-ink-3)' }}>Calculando…</p>
 
   const { filas, total, sin_precio, desperdicio_obra } = datos
+
+  // Sin computo no hay lista, y un total en $ 0,00 diria que la obra no
+  // necesita comprar nada.
+  if (filas.length === 0) {
+    return (
+      <div className="ob-vacio">
+        <h2>La lista de compra sale sola del cómputo</h2>
+        <p>
+          No se tipea: se calcula. Cargá qué tarea, dónde y cuánto en el
+          cómputo, y acá aparece cuánto hay que comprar de cada material, con
+          el desperdicio aplicado y el redondeo hecho una sola vez al final.
+        </p>
+      </div>
+    )
+  }
   const grupos = porGrupo(filas, 'rubro')
   const subtotal = (g) => g.filas.reduce((a, f) => a + (f.subtotal == null ? 0 : Number(f.subtotal)), 0)
 

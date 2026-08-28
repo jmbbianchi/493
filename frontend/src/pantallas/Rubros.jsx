@@ -64,6 +64,28 @@ export default function Rubros() {
   const difTotal = comparables.length
     ? comparables.reduce((a, r) => a + (r.p.proyectado - r.t.total), 0) : null
 
+  // Una obra en blanco no tiene una tabla de ceros: no tiene tabla. El
+  // encabezado con Total $ 0,00 se lee como si la obra no costara nada.
+  if (filas.length === 0) {
+    return (
+      <>
+        <div className="ob-toolbar"><span className="ob-label">Rubros</span></div>
+        <div className="ob-vacio">
+          <h2>Todavía no hay ningún rubro con datos</h2>
+          <p>
+            Un rubro aparece acá cuando tiene al menos una de las tres cosas:
+            algo computado, un presupuesto confirmado o un pago registrado.
+          </p>
+          <p>
+            Empezá por el <Link to={`/obra/${obra.id}/computo`}>cómputo</Link> —
+            de ahí sale el teórico— o cargá directo el presupuesto que te pasó
+            un proveedor entrando a cualquier rubro desde acá una vez que exista.
+          </p>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="ob-toolbar">
