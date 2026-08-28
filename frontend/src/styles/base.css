@@ -352,3 +352,34 @@ body {
   }
   .ob-topbar__ruta { display: none; }
 }
+
+/* ---------- alta de presupuesto ----------
+   Un formulario largo que se llena una vez por proveedor. Va en grilla
+   que se acomoda sola: en el telefono queda de a una columna sin una
+   media query propia. */
+.ob-alta { margin: var(--ob-gap-4); padding: var(--ob-gap-4); }
+.ob-alta__grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--ob-gap-3);
+  align-items: end;
+}
+.ob-alta__grilla label { display: grid; gap: var(--ob-gap-1); }
+.ob-alta__grilla .ob-input { width: 100%; }
+.ob-alta__check {
+  display: flex !important; align-items: center; gap: var(--ob-gap-2);
+  font-size: var(--ob-fs-sm); padding-bottom: .4rem;
+}
+.ob-alta__titulo {
+  margin: var(--ob-gap-5) 0 var(--ob-gap-2);
+  padding-top: var(--ob-gap-3);
+  border-top: var(--ob-border);
+  font-size: var(--ob-fs-sm);
+  color: var(--ob-ink-2);
+}
+.ob-alta > .ob-btn { margin-top: var(--ob-gap-4); }
+
+/* Los links dentro de una tabla no se subrayan: con una fila cada 30 px
+   el subrayado convierte la tabla en un cartel de neon. */
+.ob-table a { color: var(--ob-accent); text-decoration: none; }
+.ob-table a:hover { text-decoration: underline; }

@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, Link } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
-import { plata, porGrupo } from '../formato'
+import { plata, num, porGrupo } from '../formato'
 
 /**
- * La columna vertebral de la app: un renglon por rubro con los tres numeros
- * al lado. Hoy solo esta poblada la primera columna.
+ * La columna vertebral de la app: un renglón por rubro con los tres números
+ * al lado y las diferencias entre ellos.
  *
- * Las columnas vacias se dejan a la vista igual, y no ocultas hasta que haya
- * datos: la forma de la tabla es el argumento del producto. Quien la mira
- * tiene que ver que faltan dos numeros, no creer que hay uno solo.
+ * Las columnas que todavía no tienen datos se dejan a la vista igual, y no
+ * ocultas: la forma de la tabla es el argumento del producto. Quien la mira
+ * tiene que ver que faltan números, no creer que hay uno solo.
  */
 export default function Rubros() {
   const { obra, version } = useOutletContext()
@@ -20,36 +20,52 @@ export default function Rubros() {
   useEffect(() => {
     let vivo = true
     setDatos(null)
-    api.get(`/api/obras/${obra.id}/lista-materiales`)
-      .then((d) => { if (vivo) setDatos(d) })
+    Promise.all([
+      api.get(`/api/obras/${obra.id}/lista-materiales`),
+      api.get(`/api/obras/${obra.id}/rubros`),
+      api.get(`/api/obras/${obra.id}/rubros-resumen`),
+    ]).then(([lista, rubros, resumen]) => { if (vivo) setDatos({ lista, rubros, resumen }) })
       .catch((e) => { if (vivo) setError(e) })
     return () => { vivo = false }
   }, [obra.id, version])
 
-  if (error) return <Aviso error={error} />
+  if (error) return <Aviso error={error} alCerrar={() => setError(null)} />
   if (!datos) return <p className="ob-cargando">Calculando…</p>
 
-  const grupos = porGrupo(datos.filas, 'rubro')
+  const { lista, rubros, resumen } = datos
 
   // Un material sin precio no suma. Si NINGUNO del rubro tiene precio, el
   // teorico no es cero: es desconocido, y hay que decirlo con una raya.
   // Mostrar $ 0,00 ahi se lee como "este rubro no cuesta nada", que es
   // justo el error que la app existe para no cometer.
-  const teorico = (g) => {
+  const porNombre = new Map(porGrupo(lista.filas, 'rubro').map((g) => {
     const conPrecio = g.filas.filter((f) => f.subtotal != null)
-    return {
+    return [g.nombre, {
       monto: conPrecio.reduce((a, f) => a + Number(f.subtotal), 0),
       completo: conPrecio.length === g.filas.length,
       hay: conPrecio.length > 0,
-    }
-  }
+    }]
+  }))
+  const porId = new Map(resumen.rubros.map((r) => [String(r.rubro_id), r]))
+
+  // Solo los rubros que tienen algo. Listar los trece siempre convierte la
+  // tabla en un formulario vacio y esconde los cuatro que importan.
+  const filas = rubros
+    .map((r) => ({ ...r, t: porNombre.get(r.nombre), p: porId.get(String(r.id)) }))
+    .filter((r) => r.t || r.p)
+
+  const totalT = filas.reduce((a, r) => a + (r.t?.hay ? r.t.monto : 0), 0)
+  const totalP = filas.reduce((a, r) => a + (r.p ? r.p.proyectado : 0), 0)
+  const hayPresupuestos = filas.some((r) => r.p)
 
   return (
     <>
       <div className="ob-toolbar">
         <span className="ob-label">Rubros</span>
         <span className="ob-toolbar__meta">
-          El teorico sale del computo · el presupuestado y el pagado todavia no se cargan
+          {hayPresupuestos
+            ? `El presupuestado es el proyectado, con IPC de ${num(resumen.proyeccion.variacion_mensual_usada, 1)} % mensual donde el índice todavía no salió`
+            : 'El teórico sale del cómputo · todavía no hay ningún presupuesto cargado'}
         </span>
       </div>
 
@@ -59,33 +75,42 @@ export default function Rubros() {
             <tr>
               <th className="ob-table__gutter">#</th>
               <th>Rubro</th>
-              <th className="ob-num">Teorico</th>
+              <th className="ob-num">Teórico</th>
               <th className="ob-num">Presupuestado</th>
+              <th className="ob-num">Diferencia</th>
               <th className="ob-num">Pagado</th>
               <th className="ob-num">Falta pagar</th>
             </tr>
           </thead>
           <tbody>
-            {grupos.map((g, i) => {
-              const t = teorico(g)
+            {filas.map((r, i) => {
+              const t = r.t?.hay ? r.t.monto : null
+              const p = r.p ? r.p.proyectado : null
+              const dif = t != null && p != null ? p - t : null
               return (
-              <tr key={g.nombre}>
-                <td className="ob-table__gutter">{i + 1}</td>
-                <td className="ob-table__strong">
-                  {g.nombre}
-                  {!t.completo && (
-                    <span className="ob-chip ob-chip--warn" style={{ marginLeft: '.4rem' }}>
-                      {t.hay ? 'parcial' : 'sin precios'}
-                    </span>
-                  )}
-                </td>
-                <td className={`ob-num${t.hay ? '' : ' ob-table__sec'}`}>
-                  {t.hay ? plata(t.monto) : '—'}
-                </td>
-                <td className="ob-num ob-table__sec">—</td>
-                <td className="ob-num ob-table__sec">—</td>
-                <td className="ob-num ob-table__sec">—</td>
-              </tr>
+                <tr key={r.id}>
+                  <td className="ob-table__gutter">{i + 1}</td>
+                  <td className="ob-table__strong">
+                    <Link to={`/obra/${obra.id}/rubros/${r.id}`}>{r.nombre}</Link>
+                    {r.t && !r.t.completo && (
+                      <span className="ob-chip ob-chip--warn" style={{ marginLeft: '.4rem' }}>
+                        {r.t.hay ? 'parcial' : 'sin precios'}
+                      </span>
+                    )}
+                  </td>
+                  <td className={`ob-num${t == null ? ' ob-table__sec' : ''}`}>
+                    {t == null ? '—' : plata(t)}
+                  </td>
+                  <td className={`ob-num${p == null ? ' ob-table__sec' : ''}`}>
+                    {p == null ? '—' : plata(p)}
+                  </td>
+                  <td className={`ob-num ${dif == null ? 'ob-table__sec'
+                    : `ob-delta--${dif > 0 ? 'sube' : 'baja'}`}`}>
+                    {dif == null ? '—' : `${dif > 0 ? '+' : ''}${plata(dif)}`}
+                  </td>
+                  <td className="ob-num ob-table__sec">—</td>
+                  <td className="ob-num ob-table__sec">—</td>
+                </tr>
               )
             })}
           </tbody>
@@ -93,8 +118,15 @@ export default function Rubros() {
             <tr>
               <td className="ob-table__gutter" />
               <td>Total</td>
-              <td className="ob-num ob-total">{plata(datos.total)}</td>
-              <td className="ob-num ob-table__sec">—</td>
+              <td className="ob-num ob-total">{plata(totalT)}</td>
+              <td className={`ob-num${hayPresupuestos ? ' ob-total' : ' ob-table__sec'}`}>
+                {hayPresupuestos ? plata(totalP) : '—'}
+              </td>
+              <td className={`ob-num ${!hayPresupuestos ? 'ob-table__sec'
+                : `ob-delta--${totalP > totalT ? 'sube' : 'baja'}`}`}>
+                {hayPresupuestos
+                  ? `${totalP > totalT ? '+' : ''}${plata(totalP - totalT)}` : '—'}
+              </td>
               <td className="ob-num ob-table__sec">—</td>
               <td className="ob-num ob-table__sec">—</td>
             </tr>
@@ -102,9 +134,9 @@ export default function Rubros() {
         </table>
       </div>
 
-      {datos.sin_precio.length > 0 && (
+      {lista.sin_precio.length > 0 && (
         <p className="ob-nota">
-          {datos.sin_precio.length} material(es) sin precio no suman al teorico.
+          {lista.sin_precio.length} material(es) sin precio no suman al teórico.
           Cargalos en Materiales y precios.
         </p>
       )}

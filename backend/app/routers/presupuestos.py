@@ -479,3 +479,64 @@ def _traer(obra_id: str, presupuesto_id: str) -> dict:
     if not filas:
         raise HTTPException(404, "No existe ese presupuesto en esta obra.")
     return filas[0]
+
+
+@router.get("/rubros-resumen")
+def resumen_por_rubro(obra_id: str):
+    """Lo presupuestado de cada rubro, con las mismas tres columnas.
+
+    Ruta propia y no /presupuestos/resumen: si colgara de ahi competiria
+    con /presupuestos/{presupuesto_id} y la resolucion quedaria atada al
+    orden en que estan declaradas las funciones en este archivo.
+
+    Una sola pasada por la base para todas las cuotas de la obra. La
+    alternativa -- una consulta por rubro -- es una conexion nueva por
+    rubro, porque db.py abre y cierra por operacion.
+    """
+    filas = db.query(
+        """SELECT p.rubro_id, p.fecha_base, c.orden, c.tipo, c.descripcion,
+                  c.fecha_prevista, c.monto_nominal, c.indexa, c.estado
+           FROM dbo.cuota c
+           JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
+           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND c.estado <> 'anulada'""",
+        (obra_id,))
+
+    ancla = _ancla_ipc()
+    niveles = _niveles_ipc()
+
+    # Las cuotas se agrupan por fecha_base porque el coeficiente se calcula
+    # contra el mes base de SU presupuesto, no contra uno comun.
+    por_base: dict = {}
+    for f in filas:
+        por_base.setdefault(f["fecha_base"], []).append(f)
+
+    acumulado: dict = {}
+    for fecha_base, grupo in por_base.items():
+        for c in _con_coeficientes(grupo, fecha_base, ancla, niveles):
+            r = acumulado.setdefault(c["rubro_id"],
+                                     {"nominal": Decimal(0), "proyectado": Decimal(0),
+                                      "real": Decimal(0), "cuotas": 0, "sin_coeficiente": 0})
+            r["nominal"] += Decimal(str(c["monto_nominal"]))
+            r["cuotas"] += 1
+            if c["monto_proyectado"] is not None:
+                r["proyectado"] += c["monto_proyectado"]
+            if c["monto_real"] is not None:
+                r["real"] += c["monto_real"]
+            else:
+                r["sin_coeficiente"] += 1
+
+    return {
+        "rubros": [{"rubro_id": k,
+                    "nominal": float(v["nominal"]),
+                    "proyectado": float(v["proyectado"]),
+                    "real": float(v["real"]),
+                    "cuotas": v["cuotas"],
+                    "sin_coeficiente": v["sin_coeficiente"]}
+                   for k, v in acumulado.items()],
+        "proyeccion": {
+            "hay_ipc": ancla["hay"],
+            "ultimo_mes_publicado": ancla["mes"],
+            "variacion_mensual_usada": (None if ancla["var_mensual"] is None
+                                        else float(ancla["var_mensual"])),
+        },
+    }

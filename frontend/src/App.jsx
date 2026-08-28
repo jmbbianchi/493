@@ -4,6 +4,8 @@ import * as api from './api'
 import Layout from './Layout'
 import ComoViene from './pantallas/ComoViene'
 import Rubros from './pantallas/Rubros'
+import RubroDetalle from './pantallas/RubroDetalle'
+import Presupuesto from './pantallas/Presupuesto'
 import Computo from './pantallas/Computo'
 import Lista from './pantallas/Lista'
 import Materiales from './pantallas/Materiales'
@@ -51,6 +53,8 @@ export default function App() {
         <Route index element={<Navigate to="como-viene" replace />} />
         <Route path="como-viene" element={<ComoViene />} />
         <Route path="rubros" element={<Rubros />} />
+        <Route path="rubros/:rubroId" element={<RubroDetalle />} />
+        <Route path="rubros/:rubroId/presupuestos/:presupuestoId" element={<Presupuesto />} />
         <Route path="computo" element={<ConObra Pantalla={Computo} />} />
         <Route path="lista" element={<ConObra Pantalla={Lista} />} />
         <Route path="materiales" element={<ConObra Pantalla={Materiales} />} />
