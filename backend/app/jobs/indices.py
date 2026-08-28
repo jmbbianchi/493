@@ -19,11 +19,16 @@ Ahora el job se cura solo:
 
 El primer arranque baja unos 20.000 valores. Los siguientes, unos 200.
 
-OJO CON LAS CONEXIONES
-----------------------
-db.execute() abre y cierra una conexion por llamada. Cargar 20.000 valores
-de a uno serian 20.000 conexiones y la base no lo aguanta. Por eso todo
-pasa por db.execute_many(), que agrupa de a 1.000 en una sola conexion.
+POR QUE UNA TABLA TEMPORAL Y NO UN MERGE POR FILA
+------------------------------------------------
+El primer intento hacia un MERGE por valor. Con 20.000 valores eso son
+20.000 idas y vueltas a Azure SQL, unos 5 minutos de red pura, y el job
+tiene --replica-timeout 300. Moria sin escribir IPC_NIVEL y sin dejar
+rastro claro de por que.
+
+Ahora: INSERT masivo a una tabla temporal (#idx_stage) y UN solo MERGE
+desde ahi. Misma conexion, porque la tabla temporal muere con la sesion.
+Segundos en vez de minutos.
 
 Fuentes verificadas el 28-ago-2026:
   BCRA  https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/{id}
@@ -56,9 +61,20 @@ VARIABLES = {
     28: "IPC_INTERANUAL",
 }
 
-UPSERT = """
+STAGE_DDL = """
+CREATE TABLE #idx_stage (
+    codigo VARCHAR(32)   NOT NULL,
+    fecha  DATE          NOT NULL,
+    valor  DECIMAL(20,6) NOT NULL
+);
+"""
+
+STAGE_INS = "INSERT INTO #idx_stage (codigo, fecha, valor) VALUES (%s, %s, %s)"
+
+STAGE_MERGE = """
 MERGE dbo.indice_valor AS t
-USING (SELECT %s AS codigo, %s AS fecha, %s AS valor) AS s
+USING (SELECT codigo, fecha, MAX(valor) AS valor
+       FROM #idx_stage GROUP BY codigo, fecha) AS s
    ON t.codigo = s.codigo AND t.fecha = s.fecha
 WHEN MATCHED AND t.valor <> s.valor THEN
    UPDATE SET valor = s.valor
@@ -67,9 +83,36 @@ WHEN NOT MATCHED THEN
 """
 
 
+def _cargar(filas: list) -> int:
+    """Carga masiva: temporal + un MERGE. Todo en la misma conexion porque
+    la tabla temporal vive y muere con la sesion.
+
+    El GROUP BY del MERGE no es decorativo: si la fuente devolviera dos
+    valores para la misma fecha, SQL Server aborta el MERGE entero con
+    "no puede actualizar la misma fila dos veces". Prefiero quedarme con
+    uno antes que perder la corrida.
+    """
+    if not filas:
+        return 0
+    with db.cursor() as cur:
+        cur.execute(STAGE_DDL)
+        for i in range(0, len(filas), 1000):
+            cur.executemany(STAGE_INS, filas[i:i + 1000])
+        cur.execute(STAGE_MERGE)
+    return len(filas)
+
+
 def _necesita_historia(codigo: str) -> bool:
-    fila = db.query(
-        "SELECT backfill_ok FROM dbo.indice WHERE codigo = %s", (codigo,))
+    """Si 005 todavia no se corrio, backfill_ok no existe. En ese caso el
+    job no se muere: asume que falta la historia y sigue. Sin esto, una
+    migracion pendiente mataba la corrida entera en la primera variable."""
+    try:
+        fila = db.query(
+            "SELECT backfill_ok FROM dbo.indice WHERE codigo = %s", (codigo,))
+    except Exception as e:
+        print(f"[WARN] no pude leer backfill_ok ({e}); asumo que falta historia",
+              file=sys.stderr)
+        return True
     return not fila or not fila[0]["backfill_ok"]
 
 
@@ -113,7 +156,7 @@ def _encadenar_ipc() -> int:
     for v in variaciones:
         nivel = nivel * (Decimal(1) + Decimal(str(v["valor"])) / Decimal(100))
         filas.append(("IPC_NIVEL", v["fecha"], round(nivel, 6)))
-    return db.execute_many(UPSERT, filas)
+    return _cargar(filas)
 
 
 def main() -> int:
@@ -137,8 +180,7 @@ def main() -> int:
                 print(f"[--] {codigo}: sin datos entre {desde} y {hoy}")
                 continue
 
-            db.execute_many(
-                UPSERT, [(codigo, f["fecha"], f["valor"]) for f in detalle])
+            _cargar([(codigo, f["fecha"], f["valor"]) for f in detalle])
             total += len(detalle)
 
             if historia:
