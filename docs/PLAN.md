@@ -68,7 +68,8 @@ en el environment. Para documentos e imágenes no hace falta infra nueva.
 ### Base de datos
 
 Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
-`004_precios_y_edicion`, `005_indices_historia`, `006_presupuestos`.
+`004_precios_y_edicion`, `005_indices_historia`, `006_presupuestos`,
+`007_pagos`.
 
 > **La 005 figuraba como aplicada y no lo estaba.** Se corrió recién el
 > 28-ago-2026, y por eso el job de índices venía muriendo con `Invalid
@@ -79,10 +80,11 @@ Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
 Tablas: `usuario`, `obra`, `obra_usuario`, `rubro`, `material`, `tarea_tipo`,
 `coeficiente`, `obra_coeficiente`, `obra_material`, `obra_tarea`, `proveedor`,
 `computo`, `computo_coeficiente`, `precio`, `indice`, `indice_valor`,
-`presupuesto`, `plan_tramo`, `cuota`.
+`presupuesto`, `plan_tramo`, `cuota`, `pago`.
 
 Funciones: `fn_ipc_nivel`, `fn_coef_ipc`. Vistas: `v_precio_vigente`,
-`v_indice_cobertura`, `v_presupuestado_rubro`.
+`v_indice_cobertura`, `v_presupuestado_rubro`, `v_pagado_rubro`,
+`v_pagado_presupuesto`.
 
 Series de índices completas desde 2016. `IPC_NIVEL` tiene 127 meses
 encadenados hasta jul-2026.
@@ -93,17 +95,18 @@ encadenados hasta jul-2026.
 `/lista-materiales` · `/materiales` · `/tareas` · `/rendimientos` ·
 `/precios` · `/rubros` · `/api/indices/ultimo`.
 
-### Frontend (React + Vite, sin router)
+### Frontend (React + Vite, con router)
 
-Cuatro pestañas planas: Cómputo, Lista de compra, Materiales y precios,
-Rendimientos. **Este es el problema a resolver.** Se ve como una planilla de
-Excel con mejor tipografía, no como una app.
+Barra lateral con selector de obra y siete secciones: Pagar, Cómo viene,
+Rubros, Cómputo, Lista de compra, Materiales y precios, Rendimientos. La
+obra vive en la URL (`/obra/:obraId/:seccion`). Los presupuestos y sus
+planes de pago viven adentro del rubro.
 
 ### Lo que NO existe
 
 - Mano de obra. Ni una tabla. Y es la mitad del costo de una obra.
 - Materiales sin rendimiento (caños, artefactos, aberturas).
-- Presupuesto recibido, plan de pago, cuota, pago, entrega.
+- Entregas: remito con detalle por material.
 - Plazos, avance, dependencias. **No hay una sola fecha en la base.**
 - Login. El acceso es una clave compartida (`APP_KEY`), no autenticación.
 - Documentos e imágenes.
