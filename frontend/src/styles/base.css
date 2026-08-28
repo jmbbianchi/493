@@ -474,3 +474,35 @@ body {
 .ob-obranueva__form { padding: var(--ob-gap-4); display: grid; gap: var(--ob-gap-3); }
 .ob-obranueva__form label { display: grid; gap: var(--ob-gap-1); }
 .ob-obranueva__form .ob-input { width: 100%; }
+
+/* ---------- comparativa de presupuestos ----------
+   Un grupo por rubro y sub-rubro. La cabeza se lee sin abrir: cuantas
+   cotizaciones, la mas barata, cuanto se separan y cual quedo elegida.
+   Abrirlo es para decidir, no para enterarse. */
+.ob-comp { margin: var(--ob-gap-3) var(--ob-gap-4) 0; border: var(--ob-border);
+           border-radius: var(--ob-radius); background: var(--ob-surface); }
+.ob-comp__cabeza {
+  display: flex; align-items: center; gap: var(--ob-gap-3);
+  width: 100%; padding: var(--ob-gap-3);
+  background: none; border: 0; font-family: inherit; cursor: pointer;
+  text-align: left;
+}
+.ob-comp__cabeza:hover { background: var(--ob-surface-2); }
+.ob-comp__flecha { color: var(--ob-ink-3); width: 1rem; }
+.ob-comp__rubro { font-weight: var(--ob-fw-semi); font-size: var(--ob-fs-md); }
+.ob-comp__sub { font-weight: var(--ob-fw-normal); color: var(--ob-ink-2); }
+.ob-comp__cifras { margin-left: auto; display: flex; gap: var(--ob-gap-5); }
+.ob-comp__dato { display: grid; gap: 1px; justify-items: end; }
+.ob-comp__dato .ob-num { font-size: var(--ob-fs-sm); font-weight: var(--ob-fw-semi); }
+.ob-comp__tabla { border-top: 1px solid var(--ob-line-strong); }
+.ob-comp__elegida td { background: var(--ob-accent-soft); }
+.ob-comp__elegida:hover td { background: var(--ob-accent-soft); }
+/* Cuanto mas cara que la mas barata del grupo. Es la comparacion que se
+   hace mirando tres presupuestos arriba de una mesa. */
+.ob-comp__delta { margin-left: .4rem; font-size: var(--ob-fs-2xs); }
+
+@media (max-width: 760px) {
+  .ob-comp__cabeza { flex-wrap: wrap; }
+  .ob-comp__cifras { margin-left: 0; width: 100%; gap: var(--ob-gap-4);
+                     justify-content: space-between; }
+}

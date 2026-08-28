@@ -60,10 +60,14 @@ class TramoNuevo(BaseModel):
 
 class PresupuestoNuevo(BaseModel):
     rubro_id: int
+    subrubro_id: int
     proveedor_id: int | None = None
-    tipo: str = Field(default="materiales", pattern="^(materiales|mano_obra)$")
     nombre: str = Field(min_length=1, max_length=200)
-    monto_base: float = Field(gt=0)
+    # Con origen "items" el monto sale de la suma de los renglones y lo
+    # que venga aca se ignora: dos fuentes para el mismo numero se
+    # desincronizan el dia que alguien edita una sola.
+    origen: str = Field(default="monto", pattern="^(monto|items)$")
+    monto_base: float = Field(default=0, ge=0)
     moneda: str = Field(default="ARS", pattern="^(ARS|USD)$")
     fecha_base: date
     notas: str | None = None
@@ -71,8 +75,8 @@ class PresupuestoNuevo(BaseModel):
 
 class PresupuestoCambio(BaseModel):
     rubro_id: int | None = None
+    subrubro_id: int | None = None
     proveedor_id: int | None = None
-    tipo: str | None = Field(default=None, pattern="^(materiales|mano_obra)$")
     nombre: str | None = None
     monto_base: float | None = Field(default=None, gt=0)
     moneda: str | None = Field(default=None, pattern="^(ARS|USD)$")
@@ -269,13 +273,18 @@ def _serializar(c: dict) -> dict:
 @router.get("/presupuestos")
 def listar(obra_id: str, rubro_id: int | None = None):
     sql = """
-        SELECT p.id, p.rubro_id, r.nombre AS rubro, p.proveedor_id,
-               pr.nombre AS proveedor, p.tipo, p.nombre, p.monto_base,
-               p.moneda, p.fecha_base, p.estado, p.notas,
+        SELECT p.id, p.rubro_id, r.nombre AS rubro,
+               p.subrubro_id, s.nombre AS subrubro,
+               p.proveedor_id, pr.nombre AS proveedor,
+               p.nombre, p.origen, p.monto_base, p.moneda, p.fecha_base,
+               p.estado, p.elegido, p.notas,
                (SELECT COUNT(*) FROM dbo.cuota c
-                 WHERE c.presupuesto_id = p.id AND c.estado <> 'anulada') AS cuotas
+                 WHERE c.presupuesto_id = p.id AND c.estado <> 'anulada') AS cuotas,
+               (SELECT COUNT(*) FROM dbo.presupuesto_item i
+                 WHERE i.presupuesto_id = p.id) AS items
         FROM dbo.presupuesto p
         JOIN dbo.rubro r ON r.id = p.rubro_id
+        JOIN dbo.subrubro s ON s.id = p.subrubro_id
         LEFT JOIN dbo.proveedor pr ON pr.id = p.proveedor_id
         WHERE p.obra_id = %s
     """
@@ -283,7 +292,7 @@ def listar(obra_id: str, rubro_id: int | None = None):
     if rubro_id is not None:
         sql += " AND p.rubro_id = %s"
         params += (rubro_id,)
-    sql += " ORDER BY r.orden, p.creado_en"
+    sql += " ORDER BY r.orden, s.orden, p.creado_en"
     return db.query(sql, params)
 
 
@@ -292,11 +301,12 @@ def crear(obra_id: str, p: PresupuestoNuevo):
     nuevo = str(uuid.uuid4())
     db.execute(
         """INSERT INTO dbo.presupuesto
-             (id, obra_id, rubro_id, proveedor_id, tipo, nombre, monto_base,
-              moneda, fecha_base, notas)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-        (nuevo, obra_id, p.rubro_id, p.proveedor_id, p.tipo, p.nombre,
-         p.monto_base, p.moneda, p.fecha_base, p.notas),
+             (id, obra_id, rubro_id, subrubro_id, proveedor_id, nombre,
+              origen, monto_base, moneda, fecha_base, notas)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+        (nuevo, obra_id, p.rubro_id, p.subrubro_id, p.proveedor_id, p.nombre,
+         p.origen, 0 if p.origen == "items" else p.monto_base,
+         p.moneda, p.fecha_base, p.notas),
     )
     return {"id": nuevo}
 
@@ -412,9 +422,20 @@ def confirmar(obra_id: str, presupuesto_id: str):
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                 (presupuesto_id, t["id"], t["orden"], t["tipo"], t["descripcion"],
                  t["fecha_prevista"], float(monto), t["indexa"], t["indice_codigo"]))
+        # Si es la unica cotizacion confirmada de su rubro y sub-rubro queda
+        # elegida sola. Es el caso mas comun, y obligar a marcarla a mano
+        # dejaria la columna Presupuestado vacia sin que se entienda por que.
         cur.execute(
             """UPDATE dbo.presupuesto
-                 SET estado = 'confirmado', confirmado_en = sysutcdatetime()
+                 SET estado = 'confirmado', confirmado_en = sysutcdatetime(),
+                     elegido = CASE WHEN NOT EXISTS (
+                         SELECT 1 FROM dbo.presupuesto o
+                          WHERE o.obra_id = dbo.presupuesto.obra_id
+                            AND o.rubro_id = dbo.presupuesto.rubro_id
+                            AND o.subrubro_id = dbo.presupuesto.subrubro_id
+                            AND o.estado = 'confirmado' AND o.elegido = 1
+                            AND o.id <> dbo.presupuesto.id)
+                       THEN 1 ELSE 0 END
                WHERE id = %s""", (presupuesto_id,))
     return {"cuotas": len(tramos)}
 
@@ -488,8 +509,8 @@ def ver(obra_id: str, presupuesto_id: str):
 
 def _traer(obra_id: str, presupuesto_id: str) -> dict:
     filas = db.query(
-        """SELECT id, obra_id, rubro_id, proveedor_id, tipo, nombre, monto_base,
-                  moneda, fecha_base, estado, notas
+        """SELECT id, obra_id, rubro_id, subrubro_id, proveedor_id, nombre,
+                  origen, monto_base, moneda, fecha_base, estado, elegido, notas
            FROM dbo.presupuesto WHERE id = %s AND obra_id = %s""",
         (presupuesto_id, obra_id))
     if not filas:
@@ -514,7 +535,8 @@ def resumen_por_rubro(obra_id: str):
                   c.fecha_prevista, c.monto_nominal, c.indexa, c.estado
            FROM dbo.cuota c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
-           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND c.estado <> 'anulada'""",
+           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
+             AND c.estado <> 'anulada'""",
         (obra_id,))
 
     # La tercera columna sale de su propia vista: un pago puede no tener
@@ -573,3 +595,157 @@ def resumen_por_rubro(obra_id: str):
                                         else float(ancla["var_mensual"])),
         },
     }
+
+
+# ─────────────────────────────────────────── sub-rubros
+
+@router.get("/subrubros")
+def subrubros(obra_id: str):
+    """Lista fija e igual para los trece rubros.
+
+    Es lo que permite preguntar "cuanto llevo pagado de mano de obra en
+    toda la obra". Si cada rubro tuviera los suyos se cotizaria mas fiel
+    pero no se podrian sumar transversalmente, que es para lo que existe.
+    """
+    return db.query("SELECT id, codigo, nombre, orden FROM dbo.subrubro ORDER BY orden")
+
+
+# ─────────────────────────────────────────── cual se usa
+
+@router.post("/presupuestos/{presupuesto_id}/elegir")
+def elegir(obra_id: str, presupuesto_id: str):
+    """Marca este presupuesto como el que se usa, y baja al anterior.
+
+    Para un mismo rubro y sub-rubro se piden varias cotizaciones y se usa
+    una. Solo la elegida suma en la columna Presupuestado: si sumaran
+    todas, tener tres cotizaciones del mismo trabajo mostraria el triple.
+    """
+    p = _traer(obra_id, presupuesto_id)
+    if p["estado"] != "confirmado":
+        raise HTTPException(409, "Solo se puede elegir un presupuesto confirmado.")
+
+    with db.cursor() as cur:
+        # Primero se baja la anterior: el indice unico filtrado de la base
+        # rechaza el instante en que habria dos elegidas a la vez.
+        cur.execute(
+            """UPDATE dbo.presupuesto SET elegido = 0
+               WHERE obra_id = %s AND rubro_id = %s AND subrubro_id = %s
+                 AND elegido = 1 AND id <> %s""",
+            (obra_id, p["rubro_id"], p["subrubro_id"], presupuesto_id))
+        cur.execute("UPDATE dbo.presupuesto SET elegido = 1 WHERE id = %s", (presupuesto_id,))
+    return {"elegido": True}
+
+
+# ─────────────────────────────────────────── renglones
+
+class Item(BaseModel):
+    descripcion: str = Field(min_length=1, max_length=300)
+    cantidad: float = Field(default=1, gt=0)
+    unidad: str | None = None
+    precio_unitario: float = Field(ge=0)
+    material_id: int | None = None
+
+
+@router.get("/presupuestos/{presupuesto_id}/items")
+def listar_items(obra_id: str, presupuesto_id: str):
+    _traer(obra_id, presupuesto_id)
+    return db.query(
+        """SELECT i.id, i.orden, i.descripcion, i.cantidad, i.unidad,
+                  i.precio_unitario, i.subtotal, i.material_id,
+                  m.nombre AS material
+           FROM dbo.presupuesto_item i
+           LEFT JOIN dbo.material m ON m.id = i.material_id
+           WHERE i.presupuesto_id = %s ORDER BY i.orden""",
+        (presupuesto_id,))
+
+
+@router.put("/presupuestos/{presupuesto_id}/items")
+def guardar_items(obra_id: str, presupuesto_id: str, items: list[Item]):
+    """Reemplaza la lista entera y recalcula el monto del presupuesto.
+
+    Se reemplaza y no se parchea renglon por renglon porque un presupuesto
+    de corralon se carga o se corrige de una sentada, y mantener el orden
+    consistente con altas y bajas sueltas es mas codigo del que vale.
+    """
+    p = _traer(obra_id, presupuesto_id)
+    if p["estado"] == "confirmado":
+        raise HTTPException(409, "Un presupuesto confirmado no se edita: anulalo y carga otro.")
+
+    total = sum((Decimal(str(i.cantidad)) * Decimal(str(i.precio_unitario)) for i in items),
+                Decimal(0))
+    with db.cursor() as cur:
+        cur.execute("DELETE FROM dbo.presupuesto_item WHERE presupuesto_id = %s",
+                    (presupuesto_id,))
+        for n, i in enumerate(items, 1):
+            cur.execute(
+                """INSERT INTO dbo.presupuesto_item
+                     (presupuesto_id, orden, descripcion, cantidad, unidad,
+                      precio_unitario, material_id)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                (presupuesto_id, n, i.descripcion, i.cantidad, i.unidad,
+                 i.precio_unitario, i.material_id))
+        # El monto del presupuesto ES la suma de los renglones, y no un
+        # campo aparte que alguien puede olvidarse de actualizar.
+        cur.execute(
+            "UPDATE dbo.presupuesto SET monto_base = %s, origen = 'items' WHERE id = %s",
+            (float(total.quantize(Decimal("0.01"))), presupuesto_id))
+    return {"items": len(items), "monto_base": float(total)}
+
+
+# ─────────────────────────────────────────── la vista comparativa
+
+@router.get("/comparativa")
+def comparativa(obra_id: str):
+    """Un renglon por rubro y sub-rubro con todas sus cotizaciones.
+
+    Es la pantalla de Presupuestos: cuantas cotizaciones tenes de cada
+    cosa, cuanto se separan entre si y cual quedo elegida.
+    """
+    filas = db.query(
+        """SELECT p.id, p.rubro_id, r.nombre AS rubro, r.orden AS rubro_orden,
+                  p.subrubro_id, s.nombre AS subrubro, s.orden AS subrubro_orden,
+                  p.nombre, p.monto_base, p.moneda, p.fecha_base, p.estado,
+                  p.elegido, p.origen, pr.nombre AS proveedor
+           FROM dbo.presupuesto p
+           JOIN dbo.rubro r ON r.id = p.rubro_id
+           JOIN dbo.subrubro s ON s.id = p.subrubro_id
+           LEFT JOIN dbo.proveedor pr ON pr.id = p.proveedor_id
+           WHERE p.obra_id = %s AND p.estado <> 'anulado'
+           ORDER BY r.orden, s.orden, p.monto_base""",
+        (obra_id,))
+
+    grupos: dict = {}
+    for f in filas:
+        clave = (f["rubro_id"], f["subrubro_id"])
+        g = grupos.setdefault(clave, {
+            "rubro_id": f["rubro_id"], "rubro": f["rubro"],
+            "rubro_orden": f["rubro_orden"],
+            "subrubro_id": f["subrubro_id"], "subrubro": f["subrubro"],
+            "subrubro_orden": f["subrubro_orden"],
+            "cotizaciones": [],
+        })
+        g["cotizaciones"].append({
+            "id": str(f["id"]), "nombre": f["nombre"], "proveedor": f["proveedor"],
+            "monto_base": float(f["monto_base"]), "moneda": f["moneda"],
+            "fecha_base": f["fecha_base"], "estado": f["estado"],
+            "elegido": bool(f["elegido"]), "origen": f["origen"],
+        })
+
+    salida = []
+    for g in grupos.values():
+        montos = [c["monto_base"] for c in g["cotizaciones"]
+                  if c["estado"] == "confirmado" and c["monto_base"] > 0]
+        elegido = next((c for c in g["cotizaciones"] if c["elegido"]), None)
+        salida.append({
+            **g,
+            "cantidad": len(g["cotizaciones"]),
+            "mas_barato": min(montos) if montos else None,
+            "mas_caro": max(montos) if montos else None,
+            # Cuanto separa la mas cara de la mas barata: es el numero que
+            # dice si valio la pena pedir tres presupuestos.
+            "dispersion": (max(montos) - min(montos)) if len(montos) > 1 else None,
+            "elegido_id": elegido["id"] if elegido else None,
+            "elegido_monto": elegido["monto_base"] if elegido else None,
+        })
+    salida.sort(key=lambda g: (g["rubro_orden"], g["subrubro_orden"]))
+    return {"grupos": salida}

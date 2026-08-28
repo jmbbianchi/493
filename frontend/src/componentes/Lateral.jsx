@@ -18,12 +18,16 @@ const SECCIONES = [
   // scrollearlo: por eso pagar no puede caer abajo.
   ['como-viene', 'Proyecto'],
   ['pagar', 'Registrar Pago'],
-  ['rubros', 'Rubros'],
-  ['computo', 'Computo'],
+  ['presupuestos', 'Presupuestos'],
   ['lista', 'Lista de compra'],
   ['materiales', 'Materiales y precios'],
   ['rendimientos', 'Rendimientos'],
 ]
+
+/* Computo y Rubros salieron de la barra el 28-ago-2026, por decision del
+   usuario. No desaparecieron: el computo se carga desde adentro del rubro
+   y el rubro se abre desde Presupuestos. La barra en el telefono es una
+   tira horizontal y cada item de mas es uno que hay que scrollear. */
 
 // El alta de obra cuelga del mismo selector y no de un boton aparte: es
 // donde uno va a buscar "otra obra", tenga o no que crearla todavia.

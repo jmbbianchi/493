@@ -46,7 +46,7 @@ export default function RubroDetalle() {
   return (
     <>
       <div className="ob-toolbar">
-        <Link className="ob-btn" to={`/obra/${obra.id}/rubros`}>← Rubros</Link>
+        <Link className="ob-btn" to={`/obra/${obra.id}/presupuestos`}>← Presupuestos</Link>
         <span className="ob-label" style={{ marginLeft: 'var(--ob-gap-3)' }}>{rubro.nombre}</span>
       </div>
 

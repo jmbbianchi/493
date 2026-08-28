@@ -36,10 +36,14 @@ router = APIRouter(prefix="/api/obras/{obra_id}", tags=["pagos"],
 
 class PagoNuevo(BaseModel):
     rubro_id: int
+    # Nullable como el presupuesto: el pago suelto que no se sabe bien a
+    # que corresponde tiene que poder entrar igual.
+    subrubro_id: int | None = None
     presupuesto_id: str | None = None
     cuota_id: str | None = None
     fecha: date
     monto: float = Field(gt=0)
+    moneda: str = Field(default="ARS", pattern="^(ARS|USD)$")
     medio: str = Field(default="transferencia",
                        pattern="^(transferencia|efectivo|cheque|otro)$")
     notas: str | None = None
@@ -56,7 +60,8 @@ def registrar(obra_id: str, p: PagoNuevo):
         # imputado al presupuesto de otro rubro descuadra las dos columnas
         # a la vez y despues no hay como darse cuenta mirando la tabla.
         filas = db.query(
-            "SELECT rubro_id, estado FROM dbo.presupuesto WHERE id = %s AND obra_id = %s",
+            """SELECT rubro_id, subrubro_id, estado FROM dbo.presupuesto
+               WHERE id = %s AND obra_id = %s""",
             (p.presupuesto_id, obra_id))
         if not filas:
             raise HTTPException(404, "Ese presupuesto no es de esta obra.")
@@ -64,14 +69,19 @@ def registrar(obra_id: str, p: PagoNuevo):
             raise HTTPException(400, "El presupuesto es de otro rubro.")
         if filas[0]["estado"] == "anulado":
             raise HTTPException(409, "El presupuesto esta anulado.")
+        # El sub-rubro del pago lo manda el presupuesto: si se pudieran
+        # separar, un pago quedaria contado en un sub-rubro y su cuota en
+        # otro, y las dos columnas dejarian de cerrar sin que se note.
+        p.subrubro_id = filas[0]["subrubro_id"]
 
     nuevo = str(uuid.uuid4())
     db.execute(
         """INSERT INTO dbo.pago
-             (id, obra_id, rubro_id, presupuesto_id, cuota_id, fecha, monto, medio, notas)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-        (nuevo, obra_id, p.rubro_id, p.presupuesto_id, p.cuota_id,
-         p.fecha, p.monto, p.medio, p.notas))
+             (id, obra_id, rubro_id, subrubro_id, presupuesto_id, cuota_id,
+              fecha, monto, moneda, medio, notas)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+        (nuevo, obra_id, p.rubro_id, p.subrubro_id, p.presupuesto_id, p.cuota_id,
+         p.fecha, p.monto, p.moneda, p.medio, p.notas))
 
     # El saldo nuevo vuelve en la misma respuesta y no en una segunda
     # llamada. Medido: releer los destinos despues de grabar duplicaba la
@@ -114,11 +124,14 @@ def _saldo(presupuesto_id: str) -> dict | None:
 @router.get("/pagos")
 def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None = None):
     sql = """
-        SELECT g.id, g.rubro_id, r.nombre AS rubro, g.presupuesto_id,
-               p.nombre AS presupuesto, g.fecha, g.monto, g.medio, g.notas,
+        SELECT g.id, g.rubro_id, r.nombre AS rubro,
+               g.subrubro_id, s.nombre AS subrubro,
+               g.presupuesto_id, p.nombre AS presupuesto,
+               g.fecha, g.monto, g.moneda, g.medio, g.notas,
                g.anulado, g.anulado_motivo
         FROM dbo.pago g
         JOIN dbo.rubro r ON r.id = g.rubro_id
+        LEFT JOIN dbo.subrubro s ON s.id = g.subrubro_id
         LEFT JOIN dbo.presupuesto p ON p.id = g.presupuesto_id
         WHERE g.obra_id = %s
     """
@@ -156,14 +169,24 @@ def destinos(obra_id: str):
     """
     rubros = db.query("SELECT id, nombre, orden FROM dbo.rubro ORDER BY orden")
 
+    subrubros = db.query(
+        "SELECT id, codigo, nombre, orden FROM dbo.subrubro ORDER BY orden")
+
+    # Solo los ELEGIDOS. Ofrecer las cotizaciones descartadas invita a
+    # imputarle un pago a un presupuesto que no se va a usar, y despues no
+    # hay forma de darse cuenta mirando la tabla.
     presupuestos = db.query(
-        """SELECT p.id, p.rubro_id, p.nombre, p.monto_base, p.fecha_base, p.moneda
+        """SELECT p.id, p.rubro_id, r.nombre AS rubro,
+                  p.subrubro_id, s.nombre AS subrubro,
+                  p.nombre, p.monto_base, p.fecha_base, p.moneda
            FROM dbo.presupuesto p
-           WHERE p.obra_id = %s AND p.estado = 'confirmado'
-           ORDER BY p.creado_en DESC""", (obra_id,))
+           JOIN dbo.rubro r ON r.id = p.rubro_id
+           JOIN dbo.subrubro s ON s.id = p.subrubro_id
+           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
+           ORDER BY r.orden, s.orden""", (obra_id,))
 
     if not presupuestos:
-        return {"rubros": rubros, "presupuestos": []}
+        return {"rubros": rubros, "subrubros": subrubros, "presupuestos": []}
 
     # Una sola pasada por las cuotas de la obra y una sola por los pagos.
     cuotas = db.query(
@@ -171,7 +194,8 @@ def destinos(obra_id: str):
                   c.fecha_prevista, c.monto_nominal, c.indexa, c.estado
            FROM dbo.cuota c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
-           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND c.estado <> 'anulada'""",
+           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
+             AND c.estado <> 'anulada'""",
         (obra_id,))
     pagado = {str(f["presupuesto_id"]): Decimal(str(f["pagado"])) for f in db.query(
         """SELECT v.presupuesto_id, v.pagado FROM dbo.v_pagado_presupuesto v
@@ -198,6 +222,9 @@ def destinos(obra_id: str):
         salida.append({
             "id": pid,
             "rubro_id": p["rubro_id"],
+            "rubro": p["rubro"],
+            "subrubro_id": p["subrubro_id"],
+            "subrubro": p["subrubro"],
             "nombre": p["nombre"],
             "moneda": p["moneda"],
             "proyectado": float(proyectado),
@@ -206,4 +233,4 @@ def destinos(obra_id: str):
             "avance_pct": float(ya / proyectado * 100) if proyectado else None,
         })
 
-    return {"rubros": rubros, "presupuestos": salida}
+    return {"rubros": rubros, "subrubros": subrubros, "presupuestos": salida}

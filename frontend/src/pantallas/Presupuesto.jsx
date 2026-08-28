@@ -19,10 +19,14 @@ export default function Presupuesto() {
   const [d, setD] = useState(null)
   const [error, setError] = useState(null)
 
+  const [items, setItems] = useState([])
+
   const cargar = () => {
     setD(null)
     api.get(`/api/obras/${obra.id}/presupuestos/${presupuestoId}`)
       .then(setD).catch(setError)
+    api.get(`/api/obras/${obra.id}/presupuestos/${presupuestoId}/items`)
+      .then(setItems).catch(() => setItems([]))
   }
   useEffect(cargar, [obra.id, presupuestoId])
 
@@ -49,6 +53,13 @@ export default function Presupuesto() {
   const t = d.total
   const borrador = p.estado === 'borrador'
 
+  const elegir = async () => {
+    try {
+      await api.post(`/api/obras/${obra.id}/presupuestos/${presupuestoId}/elegir`, {})
+      cargar()
+    } catch (e) { setError(e) }
+  }
+
   return (
     <>
       <div className="ob-toolbar">
@@ -58,8 +69,17 @@ export default function Presupuesto() {
         <span className="ob-label" style={{ marginLeft: 'var(--ob-gap-3)' }}>{p.nombre}</span>
         <span className={`ob-chip ob-chip--${borrador ? 'mudo' : 'ok'}`}
           style={{ marginLeft: 'var(--ob-gap-2)' }}>{p.estado}</span>
+        {p.elegido ? (
+          <span className="ob-chip ob-chip--ok" style={{ marginLeft: 'var(--ob-gap-2)' }}>
+            ★ en uso
+          </span>
+        ) : p.estado === 'confirmado' ? (
+          <button className="ob-btn" onClick={elegir}
+            style={{ marginLeft: 'var(--ob-gap-2)' }}>Usar ésta</button>
+        ) : null}
         <span className="ob-toolbar__meta">
-          Base {fecha(p.fecha_base)} · {p.moneda} · {p.tipo === 'mano_obra' ? 'mano de obra' : 'materiales'}
+          Base {fecha(p.fecha_base)} · {p.moneda}
+          {p.origen === 'items' ? ' · por artículos' : ' · monto único'}
         </span>
       </div>
 
@@ -87,6 +107,52 @@ export default function Presupuesto() {
           <Numero rotulo="Falta pagar" valor={plata(t.saldo)}
             pie="Contra el proyectado, no contra el nominal: lo que falta de verdad incluye el ajuste." />
         </div>
+      )}
+
+      {items.length > 0 && (
+        <>
+          <div className="ob-toolbar" style={{ borderTop: 'var(--ob-border)' }}>
+            <span className="ob-label">Artículos cotizados</span>
+            <span className="ob-toolbar__meta">
+              El monto del presupuesto es la suma de estos renglones
+            </span>
+          </div>
+          <div className="ob-tablewrap">
+            <table className="ob-table">
+              <thead>
+                <tr>
+                  <th className="ob-table__gutter">#</th>
+                  <th>Artículo</th>
+                  <th className="ob-num">Cantidad</th>
+                  <th>Un.</th>
+                  <th className="ob-num">Precio unit.</th>
+                  <th className="ob-num">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((i) => (
+                  <tr key={i.id}>
+                    <td className="ob-table__gutter">{i.orden}</td>
+                    <td>{i.descripcion}</td>
+                    <td className="ob-num">{num(i.cantidad, 2)}</td>
+                    <td className="ob-table__sec">{i.unidad || '—'}</td>
+                    <td className="ob-num">{plata(i.precio_unitario)}</td>
+                    <td className="ob-num">{plata(i.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td className="ob-table__gutter" />
+                  <td colSpan={4}>{items.length} artículos</td>
+                  <td className="ob-num ob-total">
+                    {plata(items.reduce((a, i) => a + i.subtotal, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </>
       )}
 
       {!borrador && (
