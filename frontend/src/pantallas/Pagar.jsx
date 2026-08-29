@@ -3,7 +3,9 @@ import { useOutletContext } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
 import Modal from '../componentes/Modal'
+import { subir } from '../subir'
 import { plata, num, fecha } from '../formato'
+import Adjuntos from '../componentes/Adjuntos'
 
 /**
  * Registrar Pago: lo que se pagó, y el botón para cargar uno nuevo.
@@ -22,17 +24,22 @@ export default function Pagar() {
   const { obra, version, tocado } = useOutletContext()
   const [destinos, setDestinos] = useState(null)
   const [pagos, setPagos] = useState([])
+  const [documentos, setDocumentos] = useState({})
   const [error, setError] = useState(null)
   const [abierto, setAbierto] = useState(false)
   const [hecho, setHecho] = useState(null)
 
   const cargar = async () => {
     try {
-      const [d, g] = await Promise.all([
+      const [d, g, docs] = await Promise.all([
         api.get(`/api/obras/${obra.id}/pagar-destinos`),
         api.get(`/api/obras/${obra.id}/pagos`),
+        api.get(`/api/obras/${obra.id}/documentos`),
       ])
       setDestinos(d); setPagos(g)
+      const porPago = {}
+      for (const x of docs) if (x.pago_id) (porPago[x.pago_id] ??= []).push(x)
+      setDocumentos(porPago)
     } catch (e) { setError(e) }
   }
   useEffect(() => { cargar() }, [obra.id, version])
@@ -88,6 +95,11 @@ export default function Pagar() {
           ) : (
             <div className="ob-pagar__hecho-saldo">Pago suelto, sin presupuesto asociado.</div>
           )}
+          {hecho.aviso && (
+            <div className="ob-pagar__hecho-saldo" style={{ color: 'var(--ob-warn)' }}>
+              {hecho.aviso} Podés adjuntarlo desde la lista.
+            </div>
+          )}
           <button className="ob-btn" onClick={() => setHecho(null)}>Entendido</button>
         </div>
       )}
@@ -127,6 +139,7 @@ export default function Pagar() {
                 <th>Presupuesto</th>
                 <th>Medio</th>
                 <th className="ob-num">Monto</th>
+                <th>Comprobante</th>
                 <th></th>
               </tr>
             </thead>
@@ -144,6 +157,10 @@ export default function Pagar() {
                   <td className="ob-table__sec">{p.medio}</td>
                   <td className="ob-num">
                     {p.moneda === 'USD' ? `u$d ${num(p.monto, 2)}` : plata(p.monto)}
+                  </td>
+                  <td>
+                    <Adjuntos obra={obra} colgar={{ pago_id: p.id }} tipo="factura"
+                      titulo="" provistos={documentos[p.id] ?? []} alCambiar={cargar} />
                   </td>
                   <td style={{ width: '5rem' }}>
                     {!p.anulado && (
@@ -171,8 +188,12 @@ function Formulario({ obra, destinos, alGuardar }) {
   const [f, setF] = useState(hoy)
   const [medio, setMedio] = useState('transferencia')
   const [notas, setNotas] = useState('')
+  // El comprobante se elige antes de guardar pero se sube despues: hasta
+  // que el pago no existe no hay pago_id del que colgarlo.
+  const [comprobante, setComprobante] = useState(null)
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
+  const [paso, setPaso] = useState('')
 
   // Los rubros que se ofrecen primero son los que tienen un presupuesto en
   // uso: es donde va a caer casi todo pago. Los trece siempre disponibles
@@ -220,6 +241,7 @@ function Formulario({ obra, destinos, alGuardar }) {
     setGuardando(true)
     try {
       const importe = Number(String(monto).replace(/\./g, '').replace(',', '.'))
+      setPaso('Guardando el pago…')
       const r = await api.post(`/api/obras/${obra.id}/pagos`, {
         rubro_id: Number(rubroId),
         subrubro_id: subrubroId ? Number(subrubroId) : null,
@@ -230,8 +252,22 @@ function Formulario({ obra, destinos, alGuardar }) {
         medio,
         notas: notas || null,
       })
+
+      // El pago ya esta guardado. Si la foto falla ahora -- se corto la
+      // señal, se acabaron los datos -- el pago NO se pierde: se avisa y
+      // el comprobante se adjunta despues desde la lista.
+      let aviso = null
+      if (comprobante) {
+        setPaso('Subiendo el comprobante…')
+        try {
+          await subir(obra.id, comprobante, { tipo: 'factura', pago_id: r.id })
+        } catch {
+          aviso = 'El pago quedó guardado, pero el comprobante no se pudo subir.'
+        }
+      }
+
       alGuardar({
-        monto: importe, moneda, saldo: r.saldo,
+        monto: importe, moneda, saldo: r.saldo, aviso,
         destino: elegido?.nombre
           ?? rubros.find((x) => String(x.id) === String(rubroId))?.nombre,
       })
@@ -324,9 +360,34 @@ function Formulario({ obra, destinos, alGuardar }) {
           placeholder="Opcional" />
       </label>
 
+      <div className="ob-campo">
+        <span className="ob-label">Comprobante</span>
+        <div className="ob-adj__botones">
+          <label className="ob-btn ob-btn--archivo">
+            Sacar foto
+            <input type="file" accept="image/*" capture="environment" hidden
+              onChange={(e) => setComprobante(e.target.files?.[0] ?? null)} />
+          </label>
+          <label className="ob-btn ob-btn--archivo">
+            Adjuntar
+            <input type="file" accept="image/*,application/pdf" hidden
+              onChange={(e) => setComprobante(e.target.files?.[0] ?? null)} />
+          </label>
+          {comprobante && (
+            <button type="button" className="ob-adj__quitar"
+              onClick={() => setComprobante(null)} aria-label="Quitar">×</button>
+          )}
+        </div>
+        <span className="ob-campo__pie">
+          {comprobante
+            ? `${comprobante.name} · ${Math.round(comprobante.size / 1024)} kB`
+            : 'Opcional. Un pago sin comprobante es tu palabra contra la del otro tres meses después.'}
+        </span>
+      </div>
+
       <button className="ob-btn ob-btn--primario ob-pagar__guardar" type="submit"
         disabled={guardando || !rubroId || !monto}>
-        {guardando ? 'Guardando…' : 'Registrar el pago'}
+        {guardando ? (paso || 'Guardando…') : 'Registrar el pago'}
       </button>
     </form>
   )

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
+import Adjuntos from '../componentes/Adjuntos'
 import { plata, num, fecha } from '../formato'
 
 /**
@@ -264,6 +265,11 @@ export default function Presupuesto() {
       )}
 
       <div style={{ padding: 'var(--ob-gap-4)' }}>
+        <Adjuntos obra={obra} colgar={{ presupuesto_id: presupuestoId }}
+          tipo="presupuesto" titulo="El presupuesto en papel" />
+      </div>
+
+      <div style={{ padding: '0 var(--ob-gap-4) var(--ob-gap-4)' }}>
         <button className="ob-btn" onClick={anular}>Anular este presupuesto</button>
         <span className="ob-nota" style={{ marginLeft: 'var(--ob-gap-3)', padding: 0 }}>
           No se borra: queda con el motivo, porque con quién negociaste es historia.

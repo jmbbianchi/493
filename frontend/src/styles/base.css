@@ -551,3 +551,25 @@ body {
    alguien cargo eso y por que lo dio de baja. */
 .ob-pago--anulado td { opacity: .5; text-decoration: line-through; }
 .ob-pago--anulado .ob-chip { text-decoration: none; }
+
+/* ---------- adjuntos ----------
+   Dos botones y no uno: sacar foto abre la camara de atras directo, y
+   adjuntar abre el carrete. Es un toque de diferencia y es el que importa
+   parado en la obra con el recibo en la mano. */
+.ob-adj { display: grid; gap: var(--ob-gap-2); }
+.ob-adj__botones { display: flex; gap: var(--ob-gap-2); align-items: center; flex-wrap: wrap; }
+/* El input file real esta oculto y el label hace de boton: el control
+   nativo no se puede estilar y en el telefono se ve distinto en cada uno. */
+.ob-btn--archivo { display: inline-flex; align-items: center; cursor: pointer; }
+.ob-adj__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ob-gap-1); }
+.ob-adj__lista li { display: flex; align-items: center; gap: var(--ob-gap-2);
+                    font-size: var(--ob-fs-sm); }
+.ob-adj__lista a { color: var(--ob-accent); }
+.ob-adj__peso { font-size: var(--ob-fs-2xs); color: var(--ob-ink-3); }
+.ob-adj__quitar {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--ob-ink-3); font-size: 1.1rem; line-height: 1; padding: 0 .25rem;
+  font-family: inherit;
+}
+.ob-adj__quitar:hover { color: var(--ob-bad); }
+.ob-adj__error { margin: 0; font-size: var(--ob-fs-xs); color: var(--ob-bad); }
