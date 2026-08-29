@@ -231,7 +231,9 @@ export default function Presupuesto() {
             <table className="ob-table">
               <thead>
                 <tr>
-                  <th>Fecha</th><th>Medio</th><th>Notas</th><th className="ob-num">Monto</th>
+                  <th>Fecha</th><th>Medio</th><th>Notas</th>
+                  <th className="ob-num">Pagado</th>
+                  <th className="ob-num">En pesos</th>
                 </tr>
               </thead>
               <tbody>
@@ -242,7 +244,17 @@ export default function Presupuesto() {
                     <td className="ob-table__sec">
                       {g.anulado ? `anulado: ${g.anulado_motivo}` : (g.notas || '—')}
                     </td>
-                    <td className="ob-num">{plata(g.monto)}</td>
+                    <td className="ob-num">
+                      {g.moneda === 'USD' ? `u$d ${num(g.monto, 2)}` : plata(g.monto)}
+                    </td>
+                    {/* Lo que se resta del saldo es esto, no el monto de
+                        arriba. Con la cotizacion a la vista el numero se
+                        puede auditar; sin ella hay que creerle. */}
+                    <td className={`ob-num${g.monto_ars == null ? ' ob-table__sec' : ''}`}
+                      title={g.cotizacion_usada
+                        ? `Oficial minorista ${num(g.cotizacion_usada, 2)} del día del pago` : undefined}>
+                      {g.monto_ars == null ? 'sin cotización' : plata(g.monto_ars)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

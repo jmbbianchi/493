@@ -471,9 +471,15 @@ def ver(obra_id: str, presupuesto_id: str):
            FROM dbo.plan_tramo WHERE presupuesto_id = %s ORDER BY orden""",
         (presupuesto_id,))
 
+    # monto_ars viene de la vista: es el pago convertido a pesos al oficial
+    # minorista del dia. El monto original tambien se muestra, porque lo que
+    # el proveedor recibio fueron dolares y eso es lo que dice el recibo.
     pagos = db.query(
-        """SELECT id, fecha, monto, medio, notas, anulado
-           FROM dbo.pago WHERE presupuesto_id = %s ORDER BY fecha DESC""",
+        """SELECT g.id, g.fecha, g.monto, g.moneda, g.medio, g.notas, g.anulado,
+                  v.monto_ars, v.cotizacion_usada
+           FROM dbo.pago g
+           JOIN dbo.v_pago_ars v ON v.id = g.id
+           WHERE g.presupuesto_id = %s ORDER BY g.fecha DESC""",
         (presupuesto_id,))
 
     ancla = _ancla_ipc()
@@ -481,19 +487,25 @@ def ver(obra_id: str, presupuesto_id: str):
     calculadas = _con_coeficientes(cuotas, p["fecha_base"], ancla, niveles)
 
     total = _totales(calculadas)
-    pagado = sum((Decimal(str(g["monto"])) for g in pagos if not g["anulado"]), Decimal(0))
+    pagado = sum((Decimal(str(g["monto_ars"])) for g in pagos
+                  if not g["anulado"] and g["monto_ars"] is not None), Decimal(0))
+    sin_convertir = sum(1 for g in pagos if not g["anulado"] and g["monto_ars"] is None)
     total["pagado"] = float(pagado)
     # El saldo se calcula contra el proyectado y no contra el nominal: lo
     # que falta pagar de verdad incluye el ajuste, que es el punto entero.
     total["saldo"] = total["proyectado"] - float(pagado)
     total["avance_pago_pct"] = (float(pagado) / total["proyectado"] * 100
                                 if total["proyectado"] else None)
+    total["pagos_sin_convertir"] = sin_convertir
 
     return {
         "presupuesto": {k: (str(v) if k == "id" else v) for k, v in p.items()},
         "tramos": tramos,
         "cuotas": [_serializar(c) for c in calculadas],
         "pagos": [{**g, "id": str(g["id"]), "monto": float(g["monto"]),
+                   "monto_ars": (None if g["monto_ars"] is None else float(g["monto_ars"])),
+                   "cotizacion_usada": (None if g["cotizacion_usada"] is None
+                                        else float(g["cotizacion_usada"])),
                    "anulado": bool(g["anulado"])} for g in pagos],
         "total": total,
         # Que hipotesis se uso para proyectar, dicho en la respuesta y no

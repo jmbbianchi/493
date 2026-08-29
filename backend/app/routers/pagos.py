@@ -103,10 +103,16 @@ def _saldo(presupuesto_id: str) -> dict | None:
     if not cuotas:
         return None
 
+    # v_pago_ars y no dbo.pago: un pago en dolares se convierte al oficial
+    # minorista del dia antes de restarse. Sumar el monto crudo le bajaria
+    # $2.500 al saldo por un pago de u$d 2.500.
     pagado = db.query(
-        """SELECT ISNULL(SUM(monto), 0) AS pagado FROM dbo.pago
+        """SELECT ISNULL(SUM(monto_ars), 0) AS pagado,
+                  SUM(CASE WHEN monto_ars IS NULL THEN 1 ELSE 0 END) AS sin_convertir
+           FROM dbo.v_pago_ars
            WHERE presupuesto_id = %s AND anulado = 0""", (presupuesto_id,))
     ya = Decimal(str(pagado[0]["pagado"]))
+    sin_convertir = pagado[0]["sin_convertir"] or 0
 
     proyectado = Decimal(0)
     for c in _con_coeficientes(cuotas, cuotas[0]["fecha_base"], _ancla_ipc(), _niveles_ipc()):
@@ -118,6 +124,9 @@ def _saldo(presupuesto_id: str) -> dict | None:
         "pagado": float(ya),
         "saldo": float(proyectado - ya),
         "avance_pct": float(ya / proyectado * 100) if proyectado else None,
+        # Pagos en dolares sin cotizacion para su fecha: no se suman, y hay
+        # que poder decirlo en vez de mostrar un saldo que esta de menos.
+        "pagos_sin_convertir": sin_convertir,
     }
 
 

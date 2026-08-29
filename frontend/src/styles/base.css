@@ -506,3 +506,48 @@ body {
   .ob-comp__cifras { margin-left: 0; width: 100%; gap: var(--ob-gap-4);
                      justify-content: space-between; }
 }
+
+/* ---------- modal ----------
+   Una sola sombra existe en el sistema y es para lo que flota: esta es. */
+.ob-modal {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; place-items: center;
+  padding: var(--ob-gap-4);
+  background: rgba(17, 26, 33, .45);
+  overflow-y: auto;
+}
+.ob-modal__caja {
+  background: var(--ob-surface);
+  border: var(--ob-border);
+  border-radius: var(--ob-radius);
+  box-shadow: var(--ob-shadow-pop);
+  width: min(30rem, 100%);
+  max-height: 100%;
+  display: flex; flex-direction: column;
+}
+.ob-modal__cabeza {
+  display: flex; align-items: flex-start; gap: var(--ob-gap-3);
+  padding: var(--ob-gap-4);
+  border-bottom: var(--ob-border);
+}
+.ob-modal__titulo { margin: 0; font-size: var(--ob-fs-xl); letter-spacing: -0.01em; }
+.ob-modal__bajada { margin: .25rem 0 0; font-size: var(--ob-fs-xs); color: var(--ob-ink-3); }
+.ob-modal__cerrar {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  font-size: 1.4rem; line-height: 1; color: var(--ob-ink-3);
+  padding: 0 .25rem; font-family: inherit;
+}
+.ob-modal__cerrar:hover { color: var(--ob-ink); }
+.ob-modal__cuerpo { padding: var(--ob-gap-4); overflow-y: auto; }
+
+/* ---------- campo de formulario ---------- */
+.ob-campo { display: grid; gap: var(--ob-gap-1); margin-bottom: var(--ob-gap-3); }
+.ob-campo .ob-input { width: 100%; }
+.ob-campo__pie { font-size: var(--ob-fs-2xs); color: var(--ob-ink-3); }
+
+.ob-pagar__monto-fila { display: flex; gap: var(--ob-gap-3); align-items: flex-start; }
+
+/* Un pago anulado no se esconde: se apaga. Sigue siendo historia de que
+   alguien cargo eso y por que lo dio de baja. */
+.ob-pago--anulado td { opacity: .5; text-decoration: line-through; }
+.ob-pago--anulado .ob-chip { text-decoration: none; }
