@@ -35,10 +35,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import db
-from ..seguridad import requiere_clave
+from ..acceso import exige_acceso
 
 router = APIRouter(prefix="/api/obras/{obra_id}", tags=["presupuestos"],
-                   dependencies=[Depends(requiere_clave)])
+                   dependencies=[Depends(exige_acceso)])
 
 # Cuantos dias tiene cada frecuencia. Semanal es 7 y no "un cuarto de mes":
 # el proveedor cobra los viernes, no los dias 7, 14, 21 y 28.

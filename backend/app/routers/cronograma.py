@@ -33,10 +33,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import db
-from ..seguridad import requiere_clave
+from ..acceso import exige_acceso
 
 router = APIRouter(prefix="/api/obras/{obra_id}", tags=["cronograma"],
-                   dependencies=[Depends(requiere_clave)])
+                   dependencies=[Depends(exige_acceso)])
 
 # Cuanto vale cada tarea computada: materiales por precio vigente mas la
 # mano de obra. Es el mismo motor de la lista de compra pero agrupado por

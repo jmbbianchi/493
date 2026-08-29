@@ -24,10 +24,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import almacen, db
-from ..seguridad import requiere_clave
+from ..acceso import exige_acceso
 
 router = APIRouter(prefix="/api/obras/{obra_id}", tags=["documentos"],
-                   dependencies=[Depends(requiere_clave)])
+                   dependencies=[Depends(exige_acceso)])
 
 # Una foto de telefono moderna anda por los 3-5 MB. Veinte deja lugar para
 # un PDF escaneado de varias hojas sin abrir la puerta a subir un video.

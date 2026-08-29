@@ -12,10 +12,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import db
-from ..seguridad import requiere_clave
+from ..acceso import exige_acceso
 
 router = APIRouter(prefix="/api/obras/{obra_id}", tags=["calculadora"],
-                   dependencies=[Depends(requiere_clave)])
+                   dependencies=[Depends(exige_acceso)])
 
 # ─────────────────────────────────────────── materiales
 

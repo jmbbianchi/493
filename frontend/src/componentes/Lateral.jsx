@@ -22,6 +22,9 @@ const SECCIONES = [
   ['lista', 'Lista de compra'],
   ['materiales', 'Materiales y precios'],
   ['rendimientos', 'Rendimientos'],
+  // Va ultimo porque se toca una vez cada mucho: habilitar a alguien no
+  // es una tarea de todos los dias como cargar un pago.
+  ['acceso', 'Acceso'],
 ]
 
 /* Computo y Rubros salieron de la barra el 28-ago-2026, por decision del

@@ -5,6 +5,7 @@ import Layout from './Layout'
 import Proyecto from './pantallas/Proyecto'
 import Rubros from './pantallas/Rubros'
 import Presupuestos from './pantallas/Presupuestos'
+import Usuarios from './pantallas/Usuarios'
 import Pagar from './pantallas/Pagar'
 import RubroDetalle from './pantallas/RubroDetalle'
 import Presupuesto from './pantallas/Presupuesto'
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="como-viene" element={<Proyecto />} />
         <Route path="pagar" element={<Pagar />} />
         <Route path="presupuestos" element={<Presupuestos />} />
+        <Route path="acceso" element={<Usuarios />} />
         <Route path="rubros" element={<Rubros />} />
         <Route path="rubros/:rubroId" element={<RubroDetalle />} />
         <Route path="rubros/:rubroId/presupuestos/:presupuestoId" element={<Presupuesto />} />
