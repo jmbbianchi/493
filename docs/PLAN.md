@@ -433,7 +433,54 @@ una tarea dos semanas corra también las que dependen de ella.
 
 ---
 
-### E6 · Login y compartir
+### E6 · Login y compartir — A MEDIO CAMINO (29-ago-2026)
+
+**Hecho y en producción: la capa de autorización.** Es la que administra
+Jose y la que el día de mañana sostiene el cobro.
+
+- Migración `013_acceso.sql`. `usuario` gana `estado`
+  (`invitado` | `activo` | `suspendido`), `rol_global` (`duenio` | `cliente`)
+  y `ultimo_acceso`. `entra_oid` pasó a nullable: la fila se crea con el
+  email y el oid se engancha en el primer login.
+- `backend/app/acceso.py` — el portero. Está a nivel de router y mira el
+  método: GET necesita acceso, cualquier otra cosa necesita ser editor.
+- `routers/usuarios.py` + pantalla **Acceso** — habilitar por email,
+  suspender, y asignar obras con rol.
+- Verificado con dos cuentas: el editor entra a las dos obras; el de
+  lectura lee una, recibe 403 al escribirla y 404 en la que no es suya;
+  suspendido pierde el acceso hasta a la propia.
+
+**Pendiente: enchufar la identidad.** Hoy `usuario_actual()` en
+`acceso.py` devuelve siempre al dueño, resuelto por la clave compartida.
+Ese es el único punto que cambia: el resto del acceso ya no se toca.
+
+Lo que falta, en orden:
+
+1. **Crear el tenant de External ID.** Lo hace Jose en el portal:
+   Entra ID → Administrar inquilinos → Crear → **Externo**. Nombre
+   `obra493`, país Argentina (no se cambia después), suscripción
+   `Azure subscription 1` y grupo `rg-obra493`. Se llegó hasta la pantalla
+   de elegir configuración y se paró ahí.
+   > OJO: en esa lista aparecen tres directorios — Astorarg, GrupoZand y
+   > el nuevo. El registro de la app va en el NUEVO. Hacerlo en el
+   > equivocado da un login que falla sin decir por qué.
+2. **Registrar la app** en el tenant nuevo, tipo SPA, con URI de
+   redirección `https://proud-cliff-0e19abc0f.7.azurestaticapps.net`.
+3. **Flujo de usuario** de registro e inicio de sesión, con email y
+   contraseña y, si se quiere, Google.
+4. Pasar tenant, client id y subdominio. Ninguno es secreto: van en el
+   bundle del frontend igual.
+5. Del lado del código: **`PyJWT` entra al requirements.txt**. Validar la
+   firma de un token es RSA, y ahí hacerlo a mano — como se hizo con el
+   SAS del storage — sería mala ingeniería, no ahorro. Es la excepción
+   razonada a la regla de la imagen magra.
+
+`Microsoft.AzureActiveDirectory` ya quedó registrado como proveedor en la
+suscripción (29-ago-2026): sin eso el asistente falla a mitad de camino
+con un error que no explica nada. Registrar un proveedor es configuración,
+no un recurso.
+
+### E6 · Login y compartir — el plan original
 
 **Por qué acá:** hasta que no haya identidad, "compartir con un arquitecto"
 no significa nada. Hoy el acceso es una clave compartida y `APP_KEY` está
