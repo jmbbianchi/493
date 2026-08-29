@@ -153,7 +153,27 @@ planes de pago viven adentro del rubro.
     se pueda discutir. El **real** sigue sumando sólo coeficientes
     publicados: proyectado y real son columnas distintas justamente porque
     uno es estimación y el otro es hecho.
-13. **El redondeo va una sola vez**, al final, sobre el total consolidado de
+13. **El avance se carga por tarea y sube al rubro.** Dentro de cada rubro
+    hay tareas, y es en la tarea donde alguien puede decir "esto va por la
+    mitad". El avance del rubro no se tipea: sale de sus tareas, ponderadas
+    por lo que cada una cuesta. Ponderar por cantidad de tareas diría que
+    terminar la escalera pesa lo mismo que levantar todos los muros.
+
+14. **El costo de un material pertenece al rubro donde se cargó su
+    presupuesto**, no al rubro que el material tiene en la biblioteca. La
+    plata sigue al acuerdo con el proveedor, no a la clasificación del
+    catálogo: el cemento se compra una vez y se usa en cuatro rubros, pero
+    lo pagaste dentro de un presupuesto que era de un rubro solo. La
+    agrupación por rubro de biblioteca se queda donde tiene sentido -- la
+    lista de compra, porque el cemento se compra junto -- y no manda en la
+    comparación de las tres columnas.
+
+15. **Las entregas van por remito con detalle por material, y pueden ser
+    parciales.** Un remito no cierra un presupuesto: descarga parte de lo
+    comprado. Por eso la entrega se mide contra lo pedido renglon por
+    renglon y no con un porcentaje del total.
+
+16. **El redondeo va una sola vez**, al final, sobre el total consolidado de
     cada material. Nunca por tarea: redondear por tarea infla la compra y es
     uno de los errores que tenía la planilla original.
 
@@ -460,29 +480,28 @@ ese pago.
 ~~2. ¿Un pago puede partirse entre dos presupuestos?~~ Contestada el
    28-ago-2026: no. Es la decisión 11.
 
-3. Las entregas, ¿se cargan por remito con detalle por material, o alcanza
-   con un porcentaje de lo pedido?
-4. El avance, ¿se carga por tarea o por rubro?
-5. Los 762 m² de revoque grueso del cómputo, ¿son netos de vanos o brutos?
-   Cambia la cal y el cemento de todo el rubro.
+~~3. ¿Las entregas van por remito con detalle o por porcentaje?~~ Contestada
+   el 28-ago-2026: **por remito con detalle por material, y pueden ser
+   parciales** de lo que se compró. Es la decisión 15.
 
-6. **¿A qué rubro pertenece el costo de un material: al del material o al de
-   la tarea que lo consume?** Apareció verificando E4 y no estaba previsto.
-   Hoy los materiales se agrupan por el rubro del MATERIAL y la mano de obra
-   por el rubro de la TAREA. Consecuencia visible: «Revoques» aparece sin
-   teórico aunque tenga 762 m² computados, porque su cal y su cemento viven
-   en el rubro «Mampostería» de la biblioteca. Para comparar teórico contra
-   presupuestado hacen falta las dos cosas en el mismo rubro; para la lista
-   de compra conviene el rubro del material, porque el cemento se compra una
-   vez para toda la obra. Son dos agrupaciones distintas para dos preguntas
-   distintas y hay que decidir cuál manda en la tabla de rubros.
+~~4. ¿El avance se carga por tarea o por rubro?~~ Contestada el 28-ago-2026:
+   **por tarea, y de ahí impacta en el rubro.** Es la decisión 13.
 
----
+~~5. ¿Los 762 m² de revoque son netos o brutos?~~ Contestada el 28-ago-2026:
+   **netos de vanos.**
+
+~~6. ¿A qué rubro pertenece el costo de un material?~~ Contestada el
+   28-ago-2026: **al rubro donde se cargó el presupuesto de materiales**, no
+   al rubro que el material tiene en la biblioteca. Es la decisión 14.
+
+**No quedan preguntas abiertas.** Cuando aparezca una nueva va acá antes de
+que alguien la conteste sola escribiendo código.
 
 ## 8. Deuda conocida
 
 - `deploy-obra493.ps1` no carga `APP_KEY`; se puso a mano.
 - `--system-assigned` está deprecado, va `--mi-system-assigned`.
+- Los m² del cómputo son **netos de vanos** (confirmado 28-ago-2026).
 - El Excel `493.xlsx` tiene la celda del Ladrillo H18 apuntando a la columna
   del H12: 1.040 en vez de 4.800. Son $4.223.946 que no estaban contados. La
   app ya lo calcula bien; la planilla no.
