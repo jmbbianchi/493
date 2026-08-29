@@ -200,6 +200,24 @@ planes de pago viven adentro del rubro.
 - El primer query después de una pausa tarda unos 40 segundos y falla con
   "Database is not currently available". No es un error: hay que reintentar.
 
+### Costos
+
+- **No se dan de alta recursos nuevos en Azure.** Instrucción del usuario,
+  29-ago-2026. Todo lo que se construya tiene que caber en los ocho
+  recursos que ya existen: SQL serverless, Container App, Container Apps
+  Job, Static Web App, Storage, Log Analytics, el entorno de Container
+  Apps y el resource group. Configurar lo que ya está —una regla de CORS,
+  una variable de entorno, un container de blobs— no es dar de alta nada
+  y está bien.
+- Si una etapa **necesita** un recurso nuevo, se para y se pregunta. No se
+  provisiona y después se avisa. Hoy la única que lo necesitaría es **E6**:
+  el login con Entra External ID crea un tenant, que tiene capa gratuita
+  pero es un recurso nuevo igual.
+- Las tres barreras que hacen que el techo sea estructural y no una
+  cuestión de vigilancia: `freeLimitExhaustionBehavior = AutoPause` en la
+  base —si se agota el grant gratis se pausa, no factura—, `minReplicas 0`
+  en el Container App, y el budget de u$d 10 en el resource group.
+
 ### Contenedores y deploy
 
 - El backend corre como usuario sin privilegios, así que **el puerto tiene
