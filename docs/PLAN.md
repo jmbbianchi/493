@@ -70,7 +70,7 @@ en el environment. Para documentos e imágenes no hace falta infra nueva.
 Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
 `004_precios_y_edicion`, `005_indices_historia`, `006_presupuestos`,
 `007_pagos`, `008_mano_obra`, `009_subrubros`, `010_pago_en_moneda`,
-`011_documentos`.
+`011_documentos`, `012_cronograma`.
 
 > **La 005 figuraba como aplicada y no lo estaba.** Se corrió recién el
 > 28-ago-2026, y por eso el job de índices venía muriendo con `Invalid
@@ -82,7 +82,8 @@ Tablas: `usuario`, `obra`, `obra_usuario`, `rubro`, `material`, `tarea_tipo`,
 `coeficiente`, `obra_coeficiente`, `obra_material`, `obra_tarea`, `proveedor`,
 `computo`, `computo_coeficiente`, `precio`, `indice`, `indice_valor`,
 `presupuesto`, `plan_tramo`, `cuota`, `pago`, `computo_material`,
-`subrubro`, `presupuesto_item`, `documento`.
+`subrubro`, `presupuesto_item`, `documento`, `avance_tarea`,
+`tarea_dependencia`.
 
 Funciones: `fn_ipc_nivel`, `fn_coef_ipc`. Vistas: `v_precio_vigente`,
 `v_indice_cobertura`, `v_presupuestado_rubro`, `v_pagado_rubro`,
@@ -109,7 +110,6 @@ planes de pago viven adentro del rubro.
 - Entregas: remito con detalle por material.
 - Plazos, avance, dependencias. **No hay una sola fecha en la base.**
 - Login. El acceso es una clave compartida (`APP_KEY`), no autenticación.
-- Plazos y avance: no hay una sola fecha de obra en la base. Es E5.
 - Menú lateral, rutas, cualquier cosa que parezca un gestor.
 
 ---
@@ -266,7 +266,7 @@ no en local. Una etapa que no se puede verificar no está terminada.
 
 ---
 
-### E1 · El caparazón
+### E1 · El caparazón — HECHO
 
 **Por qué primero:** es lo único que no depende de nada más, y es el reclamo
 que el usuario viene haciendo hace tres conversaciones. Hoy la app se ve como
@@ -310,7 +310,7 @@ tocar el backend.
 
 ---
 
-### E2 · Presupuestos y planes de pago
+### E2 · Presupuestos y planes de pago — HECHO
 
 **Por qué:** es lo que el usuario está haciendo en la vida real esta semana y
 no tiene dónde vivir. Y es donde aparece el número de $88 millones.
@@ -355,7 +355,7 @@ cuotas de cada mes llevando el mismo coeficiente.
 
 ---
 
-### E3 · Pagos desde el celular
+### E3 · Pagos desde el celular — HECHO
 
 **Por qué junto con E2 y no después:** si el registro de pagos llega tres
 meses tarde, nadie carga tres meses de pagos hacia atrás. La app quedaría
@@ -384,7 +384,7 @@ quince segundos y verlo reflejado en el saldo del presupuesto.
 
 ---
 
-### E4 · Mano de obra y materiales sin rendimiento
+### E4 · Mano de obra y materiales sin rendimiento — HECHO
 
 **Migración `008_mano_obra.sql`**
 
@@ -403,7 +403,7 @@ que el teórico del rubro sume las dos cosas.
 
 ---
 
-### E5 · Plazos, avance y el Gantt
+### E5 · Plazos, avance y el Gantt — HECHO (29-ago-2026)
 
 **Por qué recién acá:** hoy no existe una sola fecha en la base. Hacer el
 Gantt antes es dibujar una vista vacía.
@@ -457,7 +457,7 @@ invitaron, y con rol `lectura` no puede editar nada.
 
 ---
 
-### E7 · Documentos e imágenes
+### E7 · Documentos e imágenes — HECHO (29-ago-2026)
 
 **Migración `010_documentos.sql`**
 
