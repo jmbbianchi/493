@@ -69,7 +69,8 @@ en el environment. Para documentos e imágenes no hace falta infra nueva.
 
 Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
 `004_precios_y_edicion`, `005_indices_historia`, `006_presupuestos`,
-`007_pagos`, `008_mano_obra`.
+`007_pagos`, `008_mano_obra`, `009_subrubros`, `010_pago_en_moneda`,
+`011_documentos`.
 
 > **La 005 figuraba como aplicada y no lo estaba.** Se corrió recién el
 > 28-ago-2026, y por eso el job de índices venía muriendo con `Invalid
@@ -80,7 +81,8 @@ Migraciones aplicadas: `001_init`, `002_core`, `003_biblioteca`,
 Tablas: `usuario`, `obra`, `obra_usuario`, `rubro`, `material`, `tarea_tipo`,
 `coeficiente`, `obra_coeficiente`, `obra_material`, `obra_tarea`, `proveedor`,
 `computo`, `computo_coeficiente`, `precio`, `indice`, `indice_valor`,
-`presupuesto`, `plan_tramo`, `cuota`, `pago`, `computo_material`.
+`presupuesto`, `plan_tramo`, `cuota`, `pago`, `computo_material`,
+`subrubro`, `presupuesto_item`, `documento`.
 
 Funciones: `fn_ipc_nivel`, `fn_coef_ipc`. Vistas: `v_precio_vigente`,
 `v_indice_cobertura`, `v_presupuestado_rubro`, `v_pagado_rubro`,
@@ -107,7 +109,7 @@ planes de pago viven adentro del rubro.
 - Entregas: remito con detalle por material.
 - Plazos, avance, dependencias. **No hay una sola fecha en la base.**
 - Login. El acceso es una clave compartida (`APP_KEY`), no autenticación.
-- Documentos e imágenes.
+- Plazos y avance: no hay una sola fecha de obra en la base. Es E5.
 - Menú lateral, rutas, cualquier cosa que parezca un gestor.
 
 ---
