@@ -13,7 +13,7 @@ garantiza es que cuando entre, entre.
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from .. import db
 from ..acceso import exige_duenio
@@ -22,8 +22,15 @@ router = APIRouter(prefix="/api/usuarios", tags=["usuarios"],
                    dependencies=[Depends(exige_duenio)])
 
 
+# Forma de email y nada mas. EmailStr de pydantic arrastra el paquete
+# email-validator, y la regla de la casa es que requirements.txt tenga
+# seis lineas. Ademas la validacion que importa no es sintactica: es que
+# la persona pueda entrar de verdad con ese email, y eso lo dice Entra.
+EMAIL = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+
 class UsuarioNuevo(BaseModel):
-    email: EmailStr
+    email: str = Field(pattern=EMAIL, max_length=320)
     nombre: str = Field(min_length=1, max_length=160)
     rol_global: str = Field(default="cliente", pattern="^(duenio|cliente)$")
     notas: str | None = None
