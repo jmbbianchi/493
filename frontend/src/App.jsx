@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useOutletContext } from 'react-router-dom'
 import * as api from './api'
 import Layout from './Layout'
-import ComoViene from './pantallas/ComoViene'
+import Proyecto from './pantallas/Proyecto'
 import Rubros from './pantallas/Rubros'
 import Presupuestos from './pantallas/Presupuestos'
 import Pagar from './pantallas/Pagar'
@@ -54,7 +54,7 @@ export default function App() {
       <Route path="/obra/:obraId"
         element={<Layout obras={obras} indices={indices} version={version} tocado={tocado} />}>
         <Route index element={<Navigate to="como-viene" replace />} />
-        <Route path="como-viene" element={<ComoViene />} />
+        <Route path="como-viene" element={<Proyecto />} />
         <Route path="pagar" element={<Pagar />} />
         <Route path="presupuestos" element={<Presupuestos />} />
         <Route path="rubros" element={<Rubros />} />

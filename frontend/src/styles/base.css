@@ -573,3 +573,67 @@ body {
 }
 .ob-adj__quitar:hover { color: var(--ob-bad); }
 .ob-adj__error { margin: 0; font-size: var(--ob-fs-xs); color: var(--ob-bad); }
+
+/* ---------- las dos curvas ---------- */
+.ob-curvas { margin-top: var(--ob-gap-4); border-top: var(--ob-border); }
+.ob-curvas__veredicto {
+  margin: var(--ob-gap-4) var(--ob-gap-4) 0;
+  font-size: var(--ob-fs-md); line-height: var(--ob-lh-prose); max-width: 46rem;
+}
+.ob-curvas__lienzo { padding: var(--ob-gap-3) var(--ob-gap-4) 0; overflow-x: auto; }
+.ob-curvas__lienzo svg { width: 100%; min-width: 22rem; height: auto; display: block; }
+.ob-curvas__leyenda {
+  display: flex; flex-wrap: wrap; gap: var(--ob-gap-4);
+  padding: 0 var(--ob-gap-4) var(--ob-gap-4);
+  font-size: var(--ob-fs-xs); color: var(--ob-ink-2);
+}
+.ob-curvas__marca { display: inline-block; width: 1.1rem; height: 2px; vertical-align: middle;
+                    margin-right: .35rem; }
+.ob-curvas__marca--obra  { background: var(--ob-accent); }
+.ob-curvas__marca--plata { background: var(--ob-bad); }
+.ob-curvas__aviso { color: var(--ob-warn); }
+.ob-escala { display: inline-flex; gap: var(--ob-gap-1); }
+
+/* ---------- cronograma ---------- */
+.ob-gantt { margin-top: var(--ob-gap-4); border-top: var(--ob-border); }
+.ob-gantt__scroll { overflow-x: auto; padding-bottom: var(--ob-gap-4); position: relative; }
+.ob-gantt__rubro, .ob-gantt__fila {
+  display: flex; align-items: center; width: 100%;
+  background: none; border: 0; border-bottom: 1px solid var(--ob-line);
+  font-family: inherit; text-align: left; padding: 0;
+}
+.ob-gantt__rubro { cursor: pointer; background: var(--ob-surface-2); }
+.ob-gantt__rubro:hover { background: var(--ob-accent-soft); }
+.ob-gantt__etiqueta {
+  width: 260px; flex: 0 0 260px; padding: var(--ob-gap-2) var(--ob-gap-3);
+  display: grid; gap: 1px; font-size: var(--ob-fs-sm);
+  position: sticky; left: 0; z-index: 2; background: inherit;
+}
+.ob-gantt__fila .ob-gantt__etiqueta { background: var(--ob-surface); }
+.ob-gantt__tarea { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ob-gantt__meta { font-size: var(--ob-fs-2xs); color: var(--ob-ink-3); }
+.ob-gantt__pista { position: relative; height: 26px; flex: 1; }
+.ob-gantt__barra {
+  position: absolute; top: 5px; height: 16px;
+  background: var(--ob-accent-soft);
+  border: 1px solid var(--ob-accent);
+  border-radius: var(--ob-radius-sm);
+  cursor: pointer; overflow: hidden;
+}
+.ob-gantt__barra--rubro { background: var(--ob-surface); border-color: var(--ob-line-strong); }
+/* El avance va ADENTRO de la barra: una tarea por la mitad se ve por la
+   mitad. Al lado seria un numero mas que hay que ir a buscar. */
+.ob-gantt__avance { display: block; height: 100%; background: var(--ob-accent); opacity: .35; }
+.ob-gantt__atado { position: absolute; right: 2px; top: -1px; font-size: 9px; opacity: .6; }
+.ob-gantt__sinfecha {
+  position: absolute; left: 0; top: 3px;
+  font-size: var(--ob-fs-2xs); color: var(--ob-ink-3);
+  background: none; border: 1px dashed var(--ob-line-strong);
+  border-radius: var(--ob-radius-sm); cursor: pointer; padding: .1rem .4rem;
+  font-family: inherit;
+}
+.ob-gantt__sinfecha:hover { color: var(--ob-accent); border-color: var(--ob-accent); }
+/* Sin la linea de hoy, el cronograma dice que fechas se planificaron pero
+   no si vas atrasado. */
+.ob-gantt__hoy { position: absolute; top: 0; bottom: var(--ob-gap-4); width: 1px;
+                 background: var(--ob-bad); opacity: .55; pointer-events: none; }
