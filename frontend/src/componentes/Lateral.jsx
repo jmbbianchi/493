@@ -11,26 +11,13 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 // El orden es el del plan y no es alfabetico: primero como viene la obra,
 // despues la plata por rubro, y al final las herramientas de calculo.
 const SECCIONES = [
-  // El orden lo fijo el usuario el 28-ago-2026: primero el proyecto, que
-  // es la vista de entrada, y segundo el registro de pago, que es lo unico
-  // que se usa parado en la obra con el telefono. En el telefono la
-  // lateral es una tira horizontal, asi que lo que esta al final hay que
-  // scrollearlo: por eso pagar no puede caer abajo.
   ['como-viene', 'Proyecto'],
-  ['pagar', 'Registrar Pago'],
+  ['gastos', 'Gastos y compras'],
   ['presupuestos', 'Presupuestos'],
-  ['lista', 'Lista de compra'],
-  ['materiales', 'Materiales y precios'],
-  ['rendimientos', 'Rendimientos'],
-  // Va ultimo porque se toca una vez cada mucho: habilitar a alguien no
-  // es una tarea de todos los dias como cargar un pago.
-  ['acceso', 'Acceso'],
+  ['calculadora', 'Calculadora de materiales'],
+  ['documentacion', 'Documentación y parámetros'],
+  ['financiacion', 'Financiación'],
 ]
-
-/* Computo y Rubros salieron de la barra el 28-ago-2026, por decision del
-   usuario. No desaparecieron: el computo se carga desde adentro del rubro
-   y el rubro se abre desde Presupuestos. La barra en el telefono es una
-   tira horizontal y cada item de mas es uno que hay que scrollear. */
 
 // El alta de obra cuelga del mismo selector y no de un boton aparte: es
 // donde uno va a buscar "otra obra", tenga o no que crearla todavia.

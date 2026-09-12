@@ -16,6 +16,15 @@ import Rendimientos from './pantallas/Rendimientos'
 import ObraNueva from './pantallas/ObraNueva'
 import Aviso from './componentes/Aviso'
 
+function ModuloEnConstruccion({ titulo, descripcion }) {
+  return <section className="ob-vacio" style={{ margin: 'var(--ob-gap-5)' }}>
+    <span className="ob-label">Nueva estructura</span>
+    <h2>{titulo}</h2>
+    <p>{descripcion}</p>
+    <p>Este módulo se está construyendo alrededor del proyecto y sus tareas. El cronograma ya está disponible desde Proyecto.</p>
+  </section>
+}
+
 export default function App() {
   const [autorizado, setAutorizado] = useState(api.hayClave())
   const [obras, setObras] = useState(null)
@@ -56,8 +65,14 @@ export default function App() {
         element={<Layout obras={obras} indices={indices} version={version} tocado={tocado} />}>
         <Route index element={<Navigate to="como-viene" replace />} />
         <Route path="como-viene" element={<Proyecto />} />
-        <Route path="pagar" element={<Pagar />} />
+        <Route path="gastos" element={<ModuloEnConstruccion titulo="Gastos y compras" descripcion="Registro de gastos, compras, compromisos y proyección de fondos." />} />
         <Route path="presupuestos" element={<Presupuestos />} />
+        <Route path="calculadora" element={<ModuloEnConstruccion titulo="Calculadora de materiales" descripcion="Materialidades, consumos por unidad y cantidades estimadas de compra." />} />
+        <Route path="documentacion" element={<ModuloEnConstruccion titulo="Documentación y parámetros" descripcion="Datos básicos, planos, fotos y carpeta técnica de la obra." />} />
+        <Route path="financiacion" element={<ModuloEnConstruccion titulo="Financiación" descripcion="Préstamos, desembolsos, cuotas, intereses y escenarios de adelanto." />} />
+        {/* Rutas antiguas conservadas temporalmente para no romper enlaces
+            guardados, pero ya no forman parte de la navegación principal. */}
+        <Route path="pagar" element={<Pagar />} />
         <Route path="acceso" element={<Usuarios />} />
         <Route path="rubros" element={<Rubros />} />
         <Route path="rubros/:rubroId" element={<RubroDetalle />} />
