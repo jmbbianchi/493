@@ -191,7 +191,22 @@ function Formulario({ obra, destinos, alGuardar }) {
   const [notas, setNotas] = useState('')
   // El comprobante se elige antes de guardar pero se sube despues: hasta
   // que el pago no existe no hay pago_id del que colgarlo.
-  const [comprobante, setComprobante] = useState(null)
+  const [comprobantes, setComprobantes] = useState([])
+  const [proyecto, setProyecto] = useState(null)
+  const [vinculos, setVinculos] = useState([])
+  const [avances, setAvances] = useState({})
+  const [cuotas, setCuotas] = useState([])
+  const [cuotaId, setCuotaId] = useState('')
+  useEffect(() => {
+    let vivo = true
+    setAvances({}); setCuotaId(''); setCuotas([]); setProyecto(null); setVinculos([])
+    if (presupuestoId) Promise.all([
+      api.get(`/api/obras/${obra.id}/proyecto`),
+      api.get(`/api/obras/${obra.id}/proyecto/presupuestos`),
+      api.get(`/api/obras/${obra.id}/presupuestos/${presupuestoId}`)
+    ]).then(([pr, vs, detalle]) => { if (vivo) { setProyecto(pr); setVinculos(vs.presupuestos.find((p) => p.id === presupuestoId)?.tarea_ids || []); setCuotas(detalle.cuotas.filter((c) => c.estado !== 'anulada')) } }).catch((e) => { if (vivo) setError(e) })
+    return () => { vivo = false }
+  }, [presupuestoId, obra.id])
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [paso, setPaso] = useState('')
@@ -247,6 +262,9 @@ function Formulario({ obra, destinos, alGuardar }) {
         rubro_id: Number(rubroId),
         subrubro_id: subrubroId ? Number(subrubroId) : null,
         presupuesto_id: presupuestoId || null,
+        cuota_id: cuotaId || null,
+        proyecto_version: proyecto?.version ?? null,
+        avances: Object.entries(avances).filter(([, v]) => v !== '').map(([tarea_id, v]) => ({ tarea_id, avance_pct: Number(v) })),
         fecha: f,
         monto: importe,
         moneda,
@@ -257,15 +275,13 @@ function Formulario({ obra, destinos, alGuardar }) {
       // El pago ya esta guardado. Si la foto falla ahora -- se corto la
       // señal, se acabaron los datos -- el pago NO se pierde: se avisa y
       // el comprobante se adjunta despues desde la lista.
-      let aviso = null
-      if (comprobante) {
-        setPaso('Subiendo el comprobante…')
-        try {
-          await subir(obra.id, comprobante, { tipo: 'factura', pago_id: r.id })
-        } catch {
-          aviso = 'El pago quedó guardado, pero el comprobante no se pudo subir.'
-        }
+      const fallidos = []
+      for (const comprobante of comprobantes) {
+        setPaso('Subiendo ' + comprobante.name + '…')
+        try { await subir(obra.id, comprobante, { tipo: 'factura', pago_id: r.id }) }
+        catch { fallidos.push(comprobante.name) }
       }
+      const aviso = [r.aviso, fallidos.length ? 'No se subieron: ' + fallidos.join(', ') : null].filter(Boolean).join(' ')
 
       alGuardar({
         monto: importe, moneda, saldo: r.saldo, aviso,
@@ -319,6 +335,21 @@ function Formulario({ obra, destinos, alGuardar }) {
         )}
       </label>
 
+      {presupuestoId && <label className="ob-campo"><span className="ob-label">Cuota o anticipo</span>
+        <select className="ob-input" value={cuotaId} onChange={(e) => setCuotaId(e.target.value)}>
+          <option value="">Pago parcial sin cuota específica</option>
+          {cuotas.map((c) => <option key={c.id} value={c.id}>{c.descripcion} · {fecha(c.fecha_prevista)}</option>)}
+        </select></label>}
+      {proyecto && vinculos.length > 0 && <fieldset>
+        <legend>Avance físico acumulado (opcional)</legend>
+        <p>Dejá vacío para no modificar el avance. El porcentaje pagado se calcula por separado.</p>
+        {proyecto.tareas.filter((t) => vinculos.includes(t.id)).map((t) => <label className="ob-campo" key={t.id}>
+          <span className="ob-label">{t.nombre} · actual {t.avance_pct ?? 0} %</span>
+          <input className="ob-input" type="number" min="0" max="100" step={t.tipo === 'hito' ? '100' : '0.01'}
+            value={avances[t.id] ?? ''} onChange={(e) => setAvances({ ...avances, [t.id]: e.target.value })} />
+        </label>)}
+      </fieldset>}
+
       <div className="ob-pagar__monto-fila">
         <label className="ob-campo" style={{ flex: 3 }}>
           <span className="ob-label">Monto</span>
@@ -367,21 +398,21 @@ function Formulario({ obra, destinos, alGuardar }) {
           <label className="ob-btn ob-btn--archivo">
             Sacar foto
             <input type="file" accept="image/*" capture="environment" hidden
-              onChange={(e) => setComprobante(e.target.files?.[0] ?? null)} />
+              onChange={(e) => { setComprobantes((xs) => [...xs, ...Array.from(e.target.files || [])]); e.target.value = '' }} />
           </label>
           <label className="ob-btn ob-btn--archivo">
             Adjuntar
-            <input type="file" accept="image/*,application/pdf" hidden
-              onChange={(e) => setComprobante(e.target.files?.[0] ?? null)} />
+            <input type="file" accept="image/*,application/pdf" multiple hidden
+              onChange={(e) => { setComprobantes((xs) => [...xs, ...Array.from(e.target.files || [])]); e.target.value = '' }} />
           </label>
-          {comprobante && (
+          {comprobantes.length > 0 && (
             <button type="button" className="ob-adj__quitar"
-              onClick={() => setComprobante(null)} aria-label="Quitar">×</button>
+              onClick={() => setComprobantes([])} aria-label="Quitar">×</button>
           )}
         </div>
         <span className="ob-campo__pie">
-          {comprobante
-            ? `${comprobante.name} · ${Math.round(comprobante.size / 1024)} kB`
+          {comprobantes.length
+            ? comprobantes.map((f) => f.name).join(', ')
             : 'Opcional. Un pago sin comprobante es tu palabra contra la del otro tres meses después.'}
         </span>
       </div>

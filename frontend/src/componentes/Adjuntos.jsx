@@ -37,14 +37,17 @@ export default function Adjuntos({ obra, colgar, tipo = 'otro', titulo = 'Compro
   }, [filtro, provistos])
 
   const elegido = async (e) => {
-    const f = e.target.files?.[0]
+    const archivos = Array.from(e.target.files || [])
     e.target.value = ''
-    if (!f) return
+    if (!archivos.length) return
     setSubiendo(true); setError(null)
-    try {
-      await subir(obra.id, f, { ...colgar, tipo })
-      await cargar()
-    } catch (err) { setError(err) }
+    const errores = []
+    for (const f of archivos) {
+      try { await subir(obra.id, f, { ...colgar, tipo }) }
+      catch { errores.push(f.name) }
+    }
+    try { await cargar() } catch (err) { setError(err) }
+    if (errores.length) setError(new Error('No se subieron: ' + errores.join(', ') + '. Podés volver a adjuntarlos.'))
     setSubiendo(false)
   }
 
@@ -70,7 +73,7 @@ export default function Adjuntos({ obra, colgar, tipo = 'otro', titulo = 'Compro
             pasar por el carrete. En escritorio es un file picker común. */}
         <input ref={camara} type="file" accept="image/*" capture="environment"
           onChange={elegido} hidden />
-        <input ref={archivo} type="file" accept="image/*,application/pdf"
+        <input ref={archivo} type="file" multiple accept="image/*,application/pdf"
           onChange={elegido} hidden />
       </div>
 

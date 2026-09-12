@@ -34,6 +34,11 @@ router = APIRouter(prefix="/api/obras/{obra_id}", tags=["pagos"],
                    dependencies=[Depends(exige_acceso)])
 
 
+class AvancePago(BaseModel):
+    tarea_id: uuid.UUID
+    avance_pct: float = Field(ge=0, le=100, allow_inf_nan=False)
+
+
 class PagoNuevo(BaseModel):
     rubro_id: int
     # Nullable como el presupuesto: el pago suelto que no se sabe bien a
@@ -42,11 +47,13 @@ class PagoNuevo(BaseModel):
     presupuesto_id: str | None = None
     cuota_id: str | None = None
     fecha: date
-    monto: float = Field(gt=0)
+    monto: float = Field(gt=0, allow_inf_nan=False)
     moneda: str = Field(default="ARS", pattern="^(ARS|USD)$")
     medio: str = Field(default="transferencia",
                        pattern="^(transferencia|efectivo|cheque|otro)$")
     notas: str | None = None
+    avances: list[AvancePago] = Field(default_factory=list, max_length=100)
+    proyecto_version: int | None = Field(default=None, ge=0)
 
 
 class Anulacion(BaseModel):
@@ -55,40 +62,64 @@ class Anulacion(BaseModel):
 
 @router.post("/pagos", status_code=201)
 def registrar(obra_id: str, p: PagoNuevo):
-    if p.presupuesto_id:
-        # Que el presupuesto sea de esta obra y de este rubro. Un pago
-        # imputado al presupuesto de otro rubro descuadra las dos columnas
-        # a la vez y despues no hay como darse cuenta mirando la tabla.
-        filas = db.query(
-            """SELECT rubro_id, subrubro_id, estado FROM dbo.presupuesto
-               WHERE id = %s AND obra_id = %s""",
-            (p.presupuesto_id, obra_id))
-        if not filas:
-            raise HTTPException(404, "Ese presupuesto no es de esta obra.")
-        if filas[0]["rubro_id"] != p.rubro_id:
-            raise HTTPException(400, "El presupuesto es de otro rubro.")
-        if filas[0]["estado"] == "anulado":
-            raise HTTPException(409, "El presupuesto esta anulado.")
-        # El sub-rubro del pago lo manda el presupuesto: si se pudieran
-        # separar, un pago quedaria contado en un sub-rubro y su cuota en
-        # otro, y las dos columnas dejarian de cerrar sin que se note.
-        p.subrubro_id = filas[0]["subrubro_id"]
-
+    if p.avances and (not p.presupuesto_id or p.proyecto_version is None or p.fecha > date.today()):
+        raise HTTPException(422, "El avance requiere presupuesto, versión del proyecto y fecha no futura.")
+    if len({a.tarea_id for a in p.avances}) != len(p.avances):
+        raise HTTPException(422, "No repitas una tarea.")
     nuevo = str(uuid.uuid4())
-    db.execute(
-        """INSERT INTO dbo.pago
+    with db.cursor() as cur:
+        if p.avances:
+            from .proyecto import _abrir, _incrementar
+            _abrir(cur, obra_id, p.proyecto_version)
+        if p.presupuesto_id:
+            cur.execute("""SELECT rubro_id, subrubro_id, estado, elegido FROM dbo.presupuesto WITH (UPDLOCK, HOLDLOCK)
+                           WHERE id=%s AND obra_id=%s""", (p.presupuesto_id, obra_id))
+            presupuesto = cur.fetchone()
+            if not presupuesto:
+                raise HTTPException(404, "Ese presupuesto no es de esta obra.")
+            if presupuesto["estado"] != "confirmado" or not presupuesto["elegido"]:
+                raise HTTPException(409, "Elegí un presupuesto confirmado para asignarle pagos.")
+            if presupuesto["rubro_id"] != p.rubro_id:
+                raise HTTPException(422, "El presupuesto es de otro rubro.")
+            p.subrubro_id = presupuesto["subrubro_id"]
+        if p.cuota_id:
+            cur.execute("""SELECT id FROM dbo.cuota WHERE id=%s AND presupuesto_id=%s
+                           AND estado <> 'anulada'""", (p.cuota_id, p.presupuesto_id))
+            if not p.presupuesto_id or not cur.fetchone():
+                raise HTTPException(422, "La cuota no pertenece al presupuesto.")
+        for a in p.avances:
+            cur.execute("""SELECT t.tipo FROM dbo.proyecto_tarea t
+                JOIN dbo.proyecto_presupuesto_tarea v ON v.obra_id=t.obra_id AND v.tarea_id=t.id
+                WHERE v.obra_id=%s AND v.presupuesto_id=%s AND t.id=%s""",
+                (obra_id, p.presupuesto_id, str(a.tarea_id)))
+            tarea = cur.fetchone()
+            if not tarea or tarea["tipo"] == "grupo":
+                raise HTTPException(422, "La tarea debe estar vinculada al presupuesto.")
+            if tarea["tipo"] == "hito" and a.avance_pct not in (0, 100):
+                raise HTTPException(422, "Un hito admite 0 o 100 %.")
+        cur.execute("""INSERT INTO dbo.pago
              (id, obra_id, rubro_id, subrubro_id, presupuesto_id, cuota_id,
               fecha, monto, moneda, medio, notas)
            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-        (nuevo, obra_id, p.rubro_id, p.subrubro_id, p.presupuesto_id, p.cuota_id,
-         p.fecha, p.monto, p.moneda, p.medio, p.notas))
-
-    # El saldo nuevo vuelve en la misma respuesta y no en una segunda
-    # llamada. Medido: releer los destinos despues de grabar duplicaba la
-    # espera, y el criterio de esta pantalla son quince segundos parado en
-    # la obra. Ademas ver cuanto queda es la mitad de la razon por la que
-    # alguien carga el pago ahi mismo en vez de anotarlo en un papel.
-    return {"id": nuevo, "saldo": _saldo(p.presupuesto_id) if p.presupuesto_id else None}
+           (nuevo, obra_id, p.rubro_id, p.subrubro_id, p.presupuesto_id, p.cuota_id,
+            p.fecha, p.monto, p.moneda, p.medio, p.notas))
+        for a in p.avances:
+            nota = f"Registrado con pago {nuevo}. " + (p.notas or "")
+            cur.execute("""UPDATE dbo.proyecto_avance SET avance_pct=%s,nota=%s
+                WHERE obra_id=%s AND tarea_id=%s AND fecha=%s""",
+                (a.avance_pct, nota[:1000], obra_id, str(a.tarea_id), p.fecha))
+            if not cur.rowcount:
+                cur.execute("""INSERT dbo.proyecto_avance (obra_id,tarea_id,fecha,avance_pct,nota)
+                    VALUES (%s,%s,%s,%s,%s)""", (obra_id, str(a.tarea_id), p.fecha, a.avance_pct, nota[:1000]))
+        if p.avances:
+            _incrementar(cur, obra_id, p.proyecto_version)
+    # Nunca devolver un fallo tras confirmar el pago: induciría a duplicarlo.
+    saldo, aviso = None, None
+    try:
+        saldo = _saldo(p.presupuesto_id) if p.presupuesto_id else None
+    except Exception:
+        aviso = "El pago quedó guardado. No se pudo actualizar el saldo; recargá la pantalla."
+    return {"id": nuevo, "saldo": saldo, "aviso": aviso}
 
 
 def _saldo(presupuesto_id: str) -> dict | None:
