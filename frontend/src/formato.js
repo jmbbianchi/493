@@ -14,6 +14,12 @@ export const plata = (v) =>
 
 export const fecha = (v) => (v ? String(v).slice(0, 10) : '—')
 
+export const fechaBreve = (v) => {
+  if (!v) return '—'
+  const [anio, mes, dia] = String(v).slice(0, 10).split('-')
+  return `${dia}/${mes}/${anio.slice(-2)}`
+}
+
 /** Como `num` pero sin ceros de relleno: 1,0000 -> 1 ; 14,4000 -> 14,4 */
 export const numCorto = (v, dec = 4) => {
   if (v === null || v === undefined || v === '') return '—'

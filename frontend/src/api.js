@@ -29,7 +29,13 @@ async function pedir(ruta, opciones = {}) {
   if (!r.ok) {
     let cuerpo = null
     try { cuerpo = await r.json() } catch { /* respuesta sin json */ }
-    throw new Error(cuerpo?.detail || `La API respondio ${r.status}.`)
+    const detalle = cuerpo?.detail
+    const mensaje = Array.isArray(detalle)
+      ? detalle.map((e) => `${e.loc?.slice(1).join('.') || 'Dato'}: ${e.msg}`).join(' · ')
+      : detalle
+    const error = new Error(mensaje || `La API respondio ${r.status}.`)
+    error.status = r.status
+    throw error
   }
   if (r.status === 204) return null
   return r.json()

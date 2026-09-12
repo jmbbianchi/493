@@ -18,7 +18,9 @@ services:
     container_name: obra493-sql-dev
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Obra493$Local"
+      # Compose interpreta $NOMBRE como una variable; $$ deja el signo
+      # literal y mantiene igual la clave documentada para el desarrollador.
+      MSSQL_SA_PASSWORD: "Obra493$$Local"
       MSSQL_PID: "Developer"          # gratis para desarrollo
     ports:
       - "1433:1433"
@@ -48,7 +50,7 @@ services:
       sql:
         condition: service_healthy
     environment:
-      SQL_CONNECTION_STRING: "Server=tcp:sql,1433;Database=master;User ID=sa;Password=Obra493$Local;Encrypt=false;"
+      SQL_CONNECTION_STRING: "Server=tcp:sql,1433;Database=obra493_local;User ID=sa;Password=Obra493$$Local;Encrypt=false;"
       CORS_ORIGINS: "http://localhost:5173"
       STORAGE_ACCOUNT: "devstoreaccount1"
       STORAGE_CONTAINER: "documentos"

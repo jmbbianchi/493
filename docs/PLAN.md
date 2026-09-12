@@ -1,5 +1,10 @@
 # Obra — de calculadora a gestor de obra
 
+> Plan histórico del enfoque anterior. Para alcance y prioridades funcionales
+> prevalece [PRODUCTO.md](PRODUCTO.md), actualizado el 12-sep-2026. Conservar
+> las restricciones operativas aplicables; verificar en código y entorno las
+> afirmaciones de estado de este documento antes de usarlas.
+
 Plan de trabajo para Claude Code. Escrito el 28-ago-2026.
 
 Este archivo es la fuente de verdad del proyecto. Si algo de acá contradice

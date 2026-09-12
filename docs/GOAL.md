@@ -1,5 +1,9 @@
 # Objetivo
 
+> Documento histórico. La definición funcional vigente está en
+> [PRODUCTO.md](PRODUCTO.md), acordada a partir de la conversación del
+> 12-sep-2026. El objetivo y las etapas de abajo corresponden al enfoque anterior.
+
 Convertir `obra493` de una calculadora de materiales en un **gestor de
 proyectos de obra**: una app donde cada obra vive adentro de sí misma y
 donde, para cada rubro, se ven al lado los tres números que importan —lo

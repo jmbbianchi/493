@@ -15,6 +15,11 @@ db/          migraciones SQL, en orden
 
 ## Documentos de diseño
 
+La definición funcional vigente es [docs/PRODUCTO.md](docs/PRODUCTO.md).
+El primer bloque de la reescritura se describe en
+[docs/PROYECTO-IMPLEMENTACION.md](docs/PROYECTO-IMPLEMENTACION.md), con su
+alcance implementado y la migración pendiente de verificar en SQL Server.
+
 | | |
 |---|---|
 | Especificación funcional | motor de cálculo, modelo de datos, 7 módulos |
