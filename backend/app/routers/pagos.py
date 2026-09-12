@@ -125,9 +125,9 @@ def registrar(obra_id: str, p: PagoNuevo):
 def _saldo(presupuesto_id: str) -> dict | None:
     """Proyectado, pagado y saldo de un presupuesto, en dos consultas."""
     cuotas = db.query(
-        """SELECT c.orden, c.tipo, c.descripcion, c.fecha_prevista, c.monto_nominal,
+        """SELECT c.orden, c.tipo, c.descripcion, c.fecha_prevista, c.fecha_base_ipc, c.monto_nominal,
                   c.indexa, c.estado, p.fecha_base
-           FROM dbo.cuota c
+           FROM dbo.v_cuota_programada c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
            WHERE c.presupuesto_id = %s AND c.estado <> 'anulada'""",
         (presupuesto_id,))
@@ -231,8 +231,8 @@ def destinos(obra_id: str):
     # Una sola pasada por las cuotas de la obra y una sola por los pagos.
     cuotas = db.query(
         """SELECT c.presupuesto_id, p.fecha_base, c.orden, c.tipo, c.descripcion,
-                  c.fecha_prevista, c.monto_nominal, c.indexa, c.estado
-           FROM dbo.cuota c
+                  c.fecha_prevista, c.fecha_base_ipc, c.monto_nominal, c.indexa, c.estado
+           FROM dbo.v_cuota_programada c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
            WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
              AND c.estado <> 'anulada'""",

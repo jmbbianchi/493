@@ -170,6 +170,11 @@ def _con_coeficientes(cuotas: list[dict], fecha_base: date, ancla: dict,
     salida = []
     for c in cuotas:
         fila = dict(c)
+        base = c.get("fecha_base_ipc") or fecha_base
+        mes_base_ant = _mes_anterior(date(base.year, base.month, 1))
+        n0 = niveles.get(mes_base_ant)
+        if n0 is None and c.get("fecha_base_ipc"):
+            n0 = _nivel_proyectado(mes_base_ant, ancla)
         nominal = Decimal(str(c["monto_nominal"]))
 
         if not c["indexa"]:
@@ -460,9 +465,9 @@ def ver(obra_id: str, presupuesto_id: str):
     p = _traer(obra_id, presupuesto_id)
 
     cuotas = db.query(
-        """SELECT id, orden, tipo, descripcion, fecha_prevista, monto_nominal,
+        """SELECT id, orden, tipo, descripcion, fecha_prevista, fecha_base_ipc, monto_nominal,
                   indexa, indice_codigo, estado
-           FROM dbo.cuota WHERE presupuesto_id = %s ORDER BY orden""",
+           FROM dbo.v_cuota_programada WHERE presupuesto_id = %s ORDER BY orden""",
         (presupuesto_id,))
 
     tramos = db.query(
@@ -544,8 +549,8 @@ def resumen_por_rubro(obra_id: str):
     """
     filas = db.query(
         """SELECT p.rubro_id, p.fecha_base, c.orden, c.tipo, c.descripcion,
-                  c.fecha_prevista, c.monto_nominal, c.indexa, c.estado
-           FROM dbo.cuota c
+                  c.fecha_prevista, c.fecha_base_ipc, c.monto_nominal, c.indexa, c.estado
+           FROM dbo.v_cuota_programada c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
            WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
              AND c.estado <> 'anulada'""",

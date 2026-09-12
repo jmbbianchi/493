@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../api'
 import Aviso from './Aviso'
 import Modal from './Modal'
+import GanttPagos from './GanttPagos'
 import { fechaBreve, num, plata } from '../formato'
 
 export default function PresupuestosProyecto({ obraId, proyecto, editable, alActualizar }) {
@@ -30,8 +31,8 @@ export default function PresupuestosProyecto({ obraId, proyecto, editable, alAct
   useEffect(() => { cargar() }, [obraId, proyecto.version])
 
   const tareas = useMemo(() => proyecto.tareas.filter((t) => t.tipo !== 'grupo'), [proyecto.tareas])
-  const calendario = useMemo(() => (datos?.presupuestos || []).flatMap((p) =>
-    (p.detalle?.cuotas || []).map((c) => ({ ...c, presupuesto: p.nombre, presupuesto_id: p.id, elegido: p.elegido })))
+  const calendario = useMemo(() => (datos?.presupuestos || []).filter((p) => p.elegido).flatMap((p) =>
+    (p.detalle?.cuotas || []).filter((c) => c.estado !== 'anulada').map((c) => ({ ...c, presupuesto: p.nombre, presupuesto_id: p.id, moneda: p.moneda, elegido: p.elegido })))
     .sort((a, b) => String(a.fecha_prevista).localeCompare(String(b.fecha_prevista))), [datos])
 
   if (cargando && !datos) return <section className="pr-panel pr-finanzas"><p className="ob-cargando">Cargando presupuestos vinculados…</p></section>
@@ -52,6 +53,7 @@ export default function PresupuestosProyecto({ obraId, proyecto, editable, alAct
           </article>)}
         </div>}
     </section>
+    <GanttPagos cuotas={calendario} />
     {calendario.length > 0 && <section className="pr-panel pr-finanzas">
       <div className="pr-panel__titulo"><div><h2>Compromisos de pago</h2><p>Fechas previstas de cuotas; el pago real se registra por separado.</p></div>
         <span className="ob-label">{calendario.length} cuotas</span></div>
