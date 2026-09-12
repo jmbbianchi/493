@@ -12,6 +12,8 @@ import Presupuesto from './pantallas/Presupuesto'
 import Computo from './pantallas/Computo'
 import Lista from './pantallas/Lista'
 import Materiales from './pantallas/Materiales'
+import Documentacion from './pantallas/Documentacion'
+import Financiacion from './pantallas/Financiacion'
 import Rendimientos from './pantallas/Rendimientos'
 import ObraNueva from './pantallas/ObraNueva'
 import Aviso from './componentes/Aviso'
@@ -65,11 +67,11 @@ export default function App() {
         element={<Layout obras={obras} indices={indices} version={version} tocado={tocado} />}>
         <Route index element={<Navigate to="como-viene" replace />} />
         <Route path="como-viene" element={<Proyecto />} />
-        <Route path="gastos" element={<ModuloEnConstruccion titulo="Gastos y compras" descripcion="Registro de gastos, compras, compromisos y proyección de fondos." />} />
+        <Route path="gastos" element={<Pagar />} />
         <Route path="presupuestos" element={<Presupuestos />} />
-        <Route path="calculadora" element={<ModuloEnConstruccion titulo="Calculadora de materiales" descripcion="Materialidades, consumos por unidad y cantidades estimadas de compra." />} />
-        <Route path="documentacion" element={<ModuloEnConstruccion titulo="Documentación y parámetros" descripcion="Datos básicos, planos, fotos y carpeta técnica de la obra." />} />
-        <Route path="financiacion" element={<ModuloEnConstruccion titulo="Financiación" descripcion="Préstamos, desembolsos, cuotas, intereses y escenarios de adelanto." />} />
+        <Route path="calculadora" element={<ConObra Pantalla={Materiales} />} />
+        <Route path="documentacion" element={<ConObra Pantalla={Documentacion} />} />
+        <Route path="financiacion" element={<ConObra Pantalla={Financiacion} />} />
         {/* Rutas antiguas conservadas temporalmente para no romper enlaces
             guardados, pero ya no forman parte de la navegación principal. */}
         <Route path="pagar" element={<Pagar />} />

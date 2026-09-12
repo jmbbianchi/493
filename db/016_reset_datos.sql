@@ -39,6 +39,7 @@ BEGIN TRY
   /* Acceso por obra y obras. Se conservan usuario, rubro, material, indices
      y la biblioteca para que una obra nueva tenga el punto de partida. */
   DELETE FROM dbo.obra_usuario;
+IF OBJECT_ID('dbo.financiacion','U') IS NOT NULL DELETE FROM dbo.financiacion;
   DELETE FROM dbo.obra;
 
   /* La puerta local necesita un dueño. Si Entra ya está conectado, esta fila

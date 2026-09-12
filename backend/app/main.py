@@ -16,17 +16,26 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
 from .routers import (calculadora, computo, cronograma, documentos, obras,
-                      pagos, presupuestos, usuarios, proyecto)
+                      pagos, presupuestos, usuarios, proyecto, financiacion)
 
 app = FastAPI(title="obra493", docs_url="/docs")
 
 # El hostname de la Static Web App lleva un sufijo aleatorio, asi que
 # viene por variable de entorno. La setea deploy-obra493.ps1.
-ORIGENES = [o for o in os.environ.get("CORS_ORIGINS", "").split(",") if o]
+# El origen de producción queda incluido como red de seguridad. La variable
+# permite sumar previews o dominios propios sin dejar la app inaccesible si
+# se olvidó actualizar la configuración del Container App.
+ORIGENES = {
+    o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()
+}
+ORIGENES.update({
+    "http://localhost:5173",
+    "https://proud-cliff-0e19abc0f.7.azurestaticapps.net",
+})
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ORIGENES or ["http://localhost:5173"],
+    allow_origins=sorted(ORIGENES),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,6 +50,7 @@ app.include_router(documentos.router)
 app.include_router(cronograma.router)
 app.include_router(usuarios.router)
 app.include_router(proyecto.router)
+app.include_router(financiacion.router)
 
 
 @app.get("/health")
