@@ -256,7 +256,8 @@ def presupuestos_vinculados(obra_id: UUID):
         cur.execute("SELECT presupuesto_id,tarea_id FROM dbo.proyecto_presupuesto_tarea WHERE obra_id=%s", (str(obra_id),))
         vinculos = cur.fetchall()
         cur.execute("SELECT version FROM dbo.proyecto_revision WHERE obra_id=%s", (str(obra_id),))
-        version = cur.fetchone()["version"]
+        revision = cur.fetchone()
+        version = revision["version"] if revision else 0
     por_presupuesto = {}
     for v in vinculos:
         por_presupuesto.setdefault(str(v["presupuesto_id"]), []).append(str(v["tarea_id"]))

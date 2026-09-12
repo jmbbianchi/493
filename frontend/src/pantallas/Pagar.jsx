@@ -199,7 +199,7 @@ function Formulario({ obra, destinos, alGuardar }) {
   const [cuotaId, setCuotaId] = useState('')
   useEffect(() => {
     let vivo = true
-    setAvances({}); setCuotaId(''); setCuotas([]); setProyecto(null); setVinculos([])
+    setError(null); setAvances({}); setCuotaId(''); setCuotas([]); setProyecto(null); setVinculos([])
     if (presupuestoId) Promise.all([
       api.get(`/api/obras/${obra.id}/proyecto`),
       api.get(`/api/obras/${obra.id}/proyecto/presupuestos`),
@@ -323,8 +323,11 @@ function Formulario({ obra, destinos, alGuardar }) {
         </select>
         {elegido && (
           <span className="ob-campo__pie">
-            Queda <b className="ob-num">{plata(elegido.saldo)}</b> de{' '}
-            {plata(elegido.proyectado)} proyectado.
+            Precio original: <b>{plata(elegido.nominal)}</b>.<br />
+            Pagado: <b>{plata(elegido.pagado)}</b> · {num(elegido.avance_nominal_pct, 2)} % del precio original.<br />
+            Saldo nominal: <b>{plata(elegido.saldo_nominal)}</b>.<br />
+            Total estimado con ajuste IPC: {plata(elegido.proyectado)}.<br />
+            Saldo proyectado: <b>{plata(elegido.saldo)}</b>. Puede variar con los índices.
           </span>
         )}
         {!elegido && rubroId && candidatos.length === 0 && (

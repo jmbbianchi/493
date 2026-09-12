@@ -42,6 +42,13 @@ class ProyectoApiTests(unittest.TestCase):
         patch.object(db, "query", side_effect=self.autorizacion).start()
         patch.object(proyecto, "_leer", side_effect=lambda *_: (copy.deepcopy(self.tareas), copy.deepcopy(self.rubros))).start()
 
+    def test_presupuestos_sin_revision_devuelve_version_cero(self):
+        self.cur.fetchone.side_effect = [{"id": OBRA}, {"tabla": 123}, None, None]
+        self.cur.fetchall.side_effect = [[], []]
+        r = self.enviar("GET", "/presupuestos")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json(), {"version": 0, "presupuestos": []})
+
     def autorizacion(self, sql, params):
         if "FROM dbo.usuario" in sql:
             return [{"id": "test-user", "estado": self.estado, "rol_global": "duenio"}]
