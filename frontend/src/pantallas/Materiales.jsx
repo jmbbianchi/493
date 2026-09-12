@@ -1,3 +1,4 @@
+import SelectorCategoria from '../componentes/SelectorCategoria'
 import { useEffect, useState } from 'react'
 import * as api from '../api'
 import Editable from '../componentes/Editable'
@@ -159,10 +160,10 @@ export default function Materiales({ obra, alCambiar }) {
               <input className="ob-input" required style={{ width: '100%' }} value={nuevo.nombre}
                 onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} /></label>
             <label><span className="ob-label">Rubro</span>
-              <select className="ob-input" style={{ width: '100%' }} value={nuevo.rubro_id}
+              <SelectorCategoria tipo="rubros" className="ob-input" style={{ width: '100%' }} value={nuevo.rubro_id}
                 onChange={(e) => setNuevo({ ...nuevo, rubro_id: e.target.value })}>
                 {rubros.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-              </select></label>
+              </SelectorCategoria></label>
             <label><span className="ob-label">Unidad</span>
               <input className="ob-input" required style={{ width: '100%' }} value={nuevo.unidad_consumo}
                 onChange={(e) => setNuevo({ ...nuevo, unidad_consumo: e.target.value })} /></label>

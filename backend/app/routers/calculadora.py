@@ -7,6 +7,7 @@ con los campos que edito pisados por obra_material / obra_coeficiente,
 y sin lo que marco como oculto.
 """
 import datetime as dt
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -271,6 +272,38 @@ def historial_precios(obra_id: str, material_id: int):
 @router.get("/rubros")
 def rubros(obra_id: str):
     return db.query("SELECT id, nombre, orden FROM dbo.rubro ORDER BY orden")
+
+
+class CategoriaNueva(BaseModel):
+    nombre: str = Field(min_length=1, max_length=60)
+
+
+def _crear_categoria(tabla, nombre):
+    nombre = nombre.strip()
+    if not nombre:
+        raise HTTPException(422, 'Ingresá un nombre.')
+    # Catálogo compartido existente. Serializar el alta evita duplicados
+    # si dos formularios crean el mismo nombre a la vez.
+    with db.cursor() as cur:
+        cur.execute(f'SELECT id, nombre FROM dbo.{tabla} WITH (TABLOCKX, HOLDLOCK) WHERE nombre = %s', (nombre,))
+        existente = cur.fetchone()
+        if existente:
+            return existente
+        if tabla == 'rubro':
+            cur.execute('INSERT dbo.rubro (nombre, orden) OUTPUT INSERTED.id, INSERTED.nombre SELECT %s, COALESCE(MAX(orden),0)+1 FROM dbo.rubro', (nombre,))
+        else:
+            cur.execute('INSERT dbo.subrubro (codigo, nombre, orden) OUTPUT INSERTED.id, INSERTED.nombre SELECT %s, %s, COALESCE(MAX(orden),0)+1 FROM dbo.subrubro', (uuid.uuid4().hex[:24], nombre))
+        return cur.fetchone()
+
+
+@router.post('/rubros', status_code=201)
+def crear_rubro(obra_id: str, datos: CategoriaNueva):
+    return _crear_categoria('rubro', datos.nombre)
+
+
+@router.post('/subrubros', status_code=201)
+def crear_subrubro(obra_id: str, datos: CategoriaNueva):
+    return _crear_categoria('subrubro', datos.nombre)
 
 
 # ─────────────────────────────────────────── mano de obra

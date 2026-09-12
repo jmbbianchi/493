@@ -1,3 +1,4 @@
+import SelectorCategoria from '../componentes/SelectorCategoria'
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import * as api from '../api'
@@ -201,7 +202,7 @@ function Formulario({ obra, destinos, alGuardar }) {
   const conPresupuesto = [...new Map(
     destinos.presupuestos.map((p) => [p.rubro_id, { id: p.rubro_id, nombre: p.rubro }])
   ).values()]
-  const rubros = conPresupuesto.length ? conPresupuesto : destinos.rubros
+  const rubros = destinos.rubros
 
   const subrubrosDelRubro = destinos.presupuestos
     .filter((p) => String(p.rubro_id) === String(rubroId))
@@ -279,19 +280,19 @@ function Formulario({ obra, destinos, alGuardar }) {
       <Aviso error={error} alCerrar={() => setError(null)} />
 
       <label className="ob-campo"><span className="ob-label">Rubro</span>
-        <select className="ob-input" required value={rubroId}
+        <SelectorCategoria tipo="rubros" className="ob-input" required value={rubroId}
           onChange={(e) => elegirRubro(e.target.value)}>
           <option value="">Elegí…</option>
           {rubros.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-        </select>
+        </SelectorCategoria>
       </label>
 
       <label className="ob-campo"><span className="ob-label">Sub-rubro</span>
-        <select className="ob-input" value={subrubroId}
+        <SelectorCategoria tipo="subrubros" className="ob-input" value={subrubroId}
           onChange={(e) => elegirSubrubro(e.target.value)}>
           <option value="">Sin especificar</option>
           {subrubros.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-        </select>
+        </SelectorCategoria>
       </label>
 
       <label className="ob-campo"><span className="ob-label">Presupuesto</span>

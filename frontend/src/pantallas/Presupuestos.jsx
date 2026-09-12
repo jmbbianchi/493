@@ -1,3 +1,4 @@
+import SelectorCategoria from '../componentes/SelectorCategoria'
 import { useEffect, useState } from 'react'
 import { useOutletContext, Link } from 'react-router-dom'
 import * as api from '../api'
@@ -244,14 +245,14 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
 
       <div className="ob-alta__grilla">
         <label><span className="ob-label">Rubro</span>
-          <select className="ob-input" required value={d.rubro_id} onChange={set('rubro_id')}>
+          <SelectorCategoria tipo="rubros" className="ob-input" required value={d.rubro_id} onChange={set('rubro_id')}>
             <option value="">Elegí…</option>
             {rubros.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-          </select></label>
+          </SelectorCategoria></label>
         <label><span className="ob-label">Sub-rubro</span>
-          <select className="ob-input" value={d.subrubro_id} onChange={set('subrubro_id')}>
+          <SelectorCategoria tipo="subrubros" className="ob-input" value={d.subrubro_id} onChange={set('subrubro_id')}>
             {subrubros.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-          </select></label>
+          </SelectorCategoria></label>
         <label><span className="ob-label">Quién lo pasó</span>
           <input className="ob-input" required value={d.nombre} onChange={set('nombre')}
             placeholder="Cementista - estructura" /></label>
