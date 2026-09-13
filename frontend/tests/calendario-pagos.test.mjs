@@ -20,3 +20,28 @@ test('monedas separadas y no resta dólares a pesos', () => {
  const rows=calendarioPagos([presupuesto],[{...pago,moneda:'USD'}],'2026-09-20')
  assert.equal(rows.length,2); assert.equal(rows.find((r)=>r.moneda==='ARS').semanas['2026-09-14'].pendiente,10000)
 })
+
+import { agruparRubros, estadoPago } from '../src/calendarioPagos.js'
+test('rubro agrega subrubros sin mezclar monedas y conserva estimacion incompleta', () => {
+ const segundo = {...presupuesto, subrubro_id: 3, cuotas: [{...presupuesto.cuotas[0], id:'d', monto_proyectado:null}]}
+ const filas = calendarioPagos([presupuesto, segundo], [{...pago, monto:100}, {...pago, moneda:'USD'}], '2026-09-20')
+ const grupos = agruparRubros(filas)
+ assert.equal(grupos.length,2)
+ const ars = grupos.find(g=>g.moneda==='ARS')
+ assert.equal(ars.hijos.length,2)
+ const c = ars.semanas['2026-09-14']
+ assert.equal(c.pactado,20000)
+ assert.equal(c.pagado,10000)
+ assert.equal(c.pendiente,10000)
+ assert.equal(c.sinEstimacion,true)
+ assert.equal(estadoPago(c),'parcial')
+})
+test('colores distinguen cuotas y pagos sin compromiso', () => {
+ const celda = (pagos) => calendarioPagos([presupuesto],pagos,'2026-09-20')[0].semanas['2026-09-14']
+ assert.equal(estadoPago(celda([])),'pendiente')
+ assert.equal(estadoPago(celda([pago])),'parcial')
+ assert.equal(estadoPago(celda([{...pago,monto:100}])),'completo')
+ assert.equal(estadoPago(celda([{...pago,cuota_id:null}])),'pendiente')
+ assert.equal(estadoPago({pagado:4000,cuotas:0}),'completo')
+ assert.equal(estadoPago(undefined),'')
+})

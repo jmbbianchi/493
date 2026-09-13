@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as api from '../api'
-import { calendarioPagos, semana } from '../calendarioPagos'
+import { calendarioPagos, semana, agruparRubros, estadoPago } from '../calendarioPagos'
 import { num } from '../formato'
 import '../styles/calendario-pagos.css'
 
@@ -16,25 +16,45 @@ export default function CalendarioSemanalPagos({ obraId, destinos, pagos }) {
     return () => { activo = false }
   }, [obraId, destinos, recarga])
   const filas = useMemo(() => calendarioPagos(datos || [], pagos, hoy), [datos, pagos, hoy])
+  const [cerrados, setCerrados] = useState({})
+  const [detalle, setDetalle] = useState(null)
+  const rubros = useMemo(() => agruparRubros(filas), [filas])
   const semanas = Array.from({length: 12}, (_, i) => sumarDias(inicio, i*7))
   const monedas = [...new Set(filas.map((g) => g.moneda))]
-  const campos = [['pactado','Pactado'],['estimado','Estimado'],['pagado','Pagado'],['pendiente','Pendiente nominal'],['sinImputar','Sin imputar a cuota'],['diferido','Pago diferido']]
+  const campos = [['pactado','Pactado'],['estimado','Estimado'],['pagado','Pagado'],['pendiente','Pendiente']]
   const importe = (v) => num(v/100, 2)
+  const describir = (g, s, c) => `${g.rubro}${g.subrubro ? ' / '+g.subrubro : ''} · ${g.moneda} · Semana ${s}
+Pactado: ${importe(c.pactado || 0)}
+Estimado: ${c.sinEstimacion ? 'Incompleto' : importe(c.estimado || 0)}
+Pagado en esta semana: ${importe(c.pagado || 0)}
+Pendiente de las cuotas: ${importe(c.pendiente || 0)}
+Cuotas: ${c.completas || 0} pagadas, ${c.parciales || 0} parciales, ${(c.cuotas || 0)-(c.completas || 0)-(c.parciales || 0)} impagas
+Sin imputar a cuota: ${importe(c.sinImputar || 0)}
+Pagos diferidos: ${importe(c.diferido || 0)}`
+  const celdas = (g) => semanas.map((s) => {
+    const c = g.semanas[s]
+    const texto = c ? describir(g, s, c) : ''
+    return <td key={s} className={estadoPago(c)}>{c ? <button className="cp-celda" title={texto} aria-label={texto} onClick={() => setDetalle(texto)}>
+      {c.sinEstimacion ? 'Sin estimación' : c.cuotas ? importe(c.estimado) : importe(c.pagado + c.diferido)}
+    </button> : '—'}</td>
+  })
   return <section className="cp-panel">
     <h2>Calendario de pagos</h2>
-    <p>Semanas de lunes a domingo. Pagado se muestra en la fecha real del pago; pendiente corresponde a las cuotas de cada semana.</p>
+    <p>Importes estimados por semana. Desplegá cada rubro para ver sus subrubros; pasá el mouse o tocá un importe para comparar el detalle.</p>
     <div className="cp-controles"><button className="ob-btn" onClick={() => setInicio(sumarDias(inicio,-84))}>← 12 semanas</button>
       <label>Desde <input type="date" className="ob-input" value={inicio} onChange={(e) => { if (e.target.value) setInicio(semana(e.target.value)) }} /></label>
       <button className="ob-btn" onClick={() => setInicio(semana(hoy))}>Hoy</button><button className="ob-btn" onClick={() => setInicio(sumarDias(inicio,84))}>12 semanas →</button></div>
     {error ? <p role="alert">{error} <button className="ob-btn" onClick={() => setRecarga((x) => x+1)}>Reintentar</button></p> : datos === null ? <p>Cargando calendario…</p> : <>
-      <p>Los pagos sin presupuesto se incluyen como pagados. Los pagos sin cuota asignada —o en otra moneda— aparecen sin imputar: no se descuentan automáticamente de una cuota.</p>
-      <div className="cp-scroll"><table className="cp-tabla"><thead><tr><th>Rubro / subrubro</th><th>Concepto</th>{semanas.map((s) => <th key={s}>{s.slice(8)}/{s.slice(5,7)}<br /><small>{s.slice(0,4)}</small></th>)}</tr></thead>
-        <tbody>{filas.map((g) => campos.map(([campo,label], i) => <tr key={`${g.key}-${campo}`}>
-          {i===0 && <th rowSpan={campos.length}>{g.rubro}<br />{g.subrubro}<br />{g.moneda}</th>}<th>{label}</th>
-          {semanas.map((s) => { const c = g.semanas[s]; const estado = !c?.cuotas ? '' : c.completas===c.cuotas ? 'completo' : c.completas || c.parciales ? 'parcial' : 'pendiente'; return <td key={s} className={campo==='pendiente' ? estado : ''} title={campo==='pendiente' ? `${c?.completas || 0} cuotas pagadas, ${c?.parciales || 0} parciales` : undefined}>{campo==='estimado' && c?.sinEstimacion ? 'Sin datos completos' : c?.[campo] ? importe(c[campo]) : '—'}</td> })}
-        </tr>))}</tbody>
-        <tfoot>{monedas.map((moneda) => campos.map(([campo,label], i) => <tr key={`${moneda}-${campo}`}>{i===0 && <th rowSpan={campos.length}>Total {moneda}</th>}<th>{label}</th>{semanas.map((s) => <td key={s}>{campo==='estimado' && filas.some((g) => g.moneda===moneda && g.semanas[s]?.sinEstimacion) ? 'Incompleto' : importe(filas.filter((g) => g.moneda===moneda).reduce((n,g) => n+(g.semanas[s]?.[campo] || 0),0))}</td>)}</tr>))}</tfoot>
-      </table></div><p>Estados de cuotas: verde = pagadas · amarillo = pago parcial · rojo = pendientes. Totales separados por moneda.</p>
+      <div className="cp-scroll"><table className="cp-tabla"><thead><tr><th>Rubro / subrubro · Estimado</th>{semanas.map((s) => <th key={s}>{s.slice(8)}/{s.slice(5,7)}<br /><small>{s.slice(0,4)}</small></th>)}</tr></thead>
+        <tbody>{rubros.flatMap((g) => [
+          <tr key={g.key} className="cp-rubro"><th><button className="cp-grupo" aria-expanded={!cerrados[g.key]} onClick={() => setCerrados((v) => ({...v, [g.key]: !v[g.key]}))}>{cerrados[g.key] ? '▸' : '▾'} {g.rubro} <small>{g.moneda}</small></button></th>{celdas(g)}</tr>,
+          ...(!cerrados[g.key] ? g.hijos.map((h) => <tr key={h.key}><th className="cp-subrubro">{h.subrubro}</th>{celdas(h)}</tr>) : [])
+        ])}{!filas.length && <tr><td colSpan={13}>Todavía no hay compromisos ni pagos registrados.</td></tr>}</tbody>
+        <tfoot>{monedas.map((moneda) => campos.map(([campo,label]) => <tr key={`${moneda}-${campo}`}><th>Total {moneda} · {label}</th>{semanas.map((s) => <td key={s}>{campo==='estimado' && filas.some((g) => g.moneda===moneda && g.semanas[s]?.sinEstimacion) ? 'Incompleto' : importe(filas.filter((g) => g.moneda===moneda).reduce((n,g) => n+(g.semanas[s]?.[campo] || 0),0))}</td>)}</tr>))}</tfoot>
+      </table></div>
+      <p><span className="cp-leyenda pendiente">Impago</span> <span className="cp-leyenda parcial">Parcial</span> <span className="cp-leyenda completo">Pagado</span> · Totales por moneda.</p>
+      <p>En semanas sin cuotas se muestra el importe de los pagos registrados. El estado de las cuotas considera solo pagos imputados; el total pagado usa la fecha real del pago.</p>
+      {detalle && <aside className="cp-detalle" aria-label="Detalle del importe"><button className="ob-btn" onClick={() => setDetalle(null)}>Cerrar detalle</button><p>{detalle}</p></aside>}
     </>}
   </section>
 }

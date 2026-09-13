@@ -11,3 +11,18 @@
 .cp-tabla .completo { background: #dcfce7; }
 .cp-tabla .parcial { background: #fef3c7; }
 .cp-tabla .pendiente { background: #fee2e2; }
+.cp-celda,.cp-grupo { background: transparent; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.cp-celda { width: 100%; text-align: right; padding: .25rem 0; }
+.cp-grupo { text-align: left; font-weight: 700; }
+.cp-grupo small { margin-left: .5rem; font-weight: 400; }
+.cp-tabla .cp-subrubro { padding-left: 2rem; font-weight: 400; }
+.cp-rubro { font-weight: 700; }
+.cp-tabla tr > th:first-child { position: sticky; left: 0; z-index: 1; min-width: 210px; }
+.cp-tabla thead tr > th:first-child { z-index: 3; }
+.cp-leyenda { padding: .2rem .5rem; border-radius: 3px; color: #172b42; }
+.cp-leyenda.completo { background: #dcfce7; }
+.cp-leyenda.parcial { background: #fef3c7; }
+.cp-leyenda.pendiente { background: #fee2e2; }
+.cp-detalle { border: 1px solid #cbd5e1; background: white; padding: 1rem; }
+.cp-detalle p { white-space: pre-line; }
+.cp-celda:focus-visible,.cp-grupo:focus-visible { outline: 2px solid #234c74; outline-offset: 2px; }
