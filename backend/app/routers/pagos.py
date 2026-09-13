@@ -166,7 +166,7 @@ def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None
     sql = """
         SELECT g.id, g.rubro_id, r.nombre AS rubro,
                g.subrubro_id, s.nombre AS subrubro,
-               g.presupuesto_id, p.nombre AS presupuesto,
+               g.presupuesto_id, g.cuota_id, p.nombre AS presupuesto,
                g.fecha, g.monto, g.moneda, g.medio, g.notas,
                g.anulado, g.anulado_motivo
         FROM dbo.pago g

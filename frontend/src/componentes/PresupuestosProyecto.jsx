@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../api'
 import Aviso from './Aviso'
 import Modal from './Modal'
-import GanttPagos from './GanttPagos'
 import { fechaBreve, num, plata } from '../formato'
 
 export default function PresupuestosProyecto({ obraId, proyecto, editable, alActualizar }) {
@@ -53,7 +52,6 @@ export default function PresupuestosProyecto({ obraId, proyecto, editable, alAct
           </article>)}
         </div>}
     </section>
-    <GanttPagos cuotas={calendario} />
     {calendario.length > 0 && <section className="pr-panel pr-finanzas">
       <div className="pr-panel__titulo"><div><h2>Compromisos de pago</h2><p>Fechas previstas de cuotas; el pago real se registra por separado.</p></div>
         <span className="ob-label">{calendario.length} cuotas</span></div>

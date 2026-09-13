@@ -7,6 +7,7 @@ import Modal from '../componentes/Modal'
 import { subir } from '../subir'
 import { plata, num, fecha } from '../formato'
 import Adjuntos from '../componentes/Adjuntos'
+import CalendarioSemanalPagos from '../componentes/CalendarioSemanalPagos'
 
 /**
  * Registrar Pago: lo que se pagó, y el botón para cargar uno nuevo.
@@ -65,6 +66,7 @@ export default function Pagar() {
 
   return (
     <>
+      <CalendarioSemanalPagos key={obra.id} obraId={obra.id} destinos={destinos} pagos={pagos} />
       <div className="ob-toolbar">
         <span className="ob-label">Registrar Pago</span>
         <span className="ob-toolbar__meta">

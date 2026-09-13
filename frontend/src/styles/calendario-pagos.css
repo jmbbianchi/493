@@ -1,0 +1,13 @@
+.cp-panel { margin: 1rem; }
+.cp-panel p { color: var(--ob-ink-2); font-size: .85rem; }
+.cp-controles { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+.cp-scroll { overflow: auto; max-height: 65vh; border: 1px solid #cbd5e1; }
+.cp-tabla { border-collapse: separate; border-spacing: 0; font-size: .78rem; width: 100%; }
+.cp-tabla th,.cp-tabla td { border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: .35rem .55rem; white-space: nowrap; }
+.cp-tabla td { text-align: right; min-width: 125px; }
+.cp-tabla th { text-align: left; background: #f1f5f9; }
+.cp-tabla thead th { position: sticky; top: 0; z-index: 2; }
+.cp-tabla tfoot { font-weight: 700; background: #e2e8f0; }
+.cp-tabla .completo { background: #dcfce7; }
+.cp-tabla .parcial { background: #fef3c7; }
+.cp-tabla .pendiente { background: #fee2e2; }
