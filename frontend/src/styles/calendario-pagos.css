@@ -28,7 +28,7 @@
 .cp-celda:focus-visible,.cp-grupo:focus-visible { outline: 2px solid #234c74; outline-offset: 2px; }
 .ob-pago-detalle { background: #f8fafc; padding: 1rem; line-height: 1.7; }
 .ob-pago-detalle__acciones { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-top: .6rem; }
-.cp-indicadores { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
-.cp-indicadores > div { background: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1rem; min-width: 230px; }
-.cp-indicadores small { display: block; margin-top: .4rem; color: #536579; }
-.cp-indicadores p { font-size: 1.1rem; font-weight: 600; }
+.cp-indicadores { display: inline-flex; vertical-align: middle; flex-wrap: wrap; gap: .45rem; margin: 0 0 0 1rem; }
+.cp-indicadores > div { display: flex; align-items: center; gap: .5rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: .35rem .6rem; min-width: 0; }
+.cp-indicadores small { color: #536579; }
+.cp-indicadores p { margin: 0; font-weight: 600; }

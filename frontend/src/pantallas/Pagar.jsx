@@ -61,6 +61,7 @@ export default function Pagar() {
   if (!destinos) return <p className="ob-cargando">Cargando…</p>
 
   const vivos = pagos.filter((p) => !p.anulado)
+  const saldoDe = (p) => p.presupuesto_id ? destinos.presupuestos.find((x) => x.id === p.presupuesto_id) : null
   const totalArs = vivos.filter((p) => p.moneda === 'ARS')
     .reduce((a, p) => a + p.monto, 0)
   const totalUsd = vivos.filter((p) => p.moneda === 'USD')
@@ -145,6 +146,7 @@ export default function Pagar() {
                 <th>Presupuesto</th>
                 <th>Medio</th>
                 <th className="ob-num">Monto</th>
+                <th className="ob-num">Saldo pendiente</th>
                 <th></th>
               </tr>
             </thead>
@@ -163,11 +165,13 @@ export default function Pagar() {
                   <td className="ob-num">
                     {p.moneda === 'USD' ? `u$d ${num(p.monto, 2)}` : plata(p.monto)}
                   </td>
+                  <td className="ob-num">{saldoDe(p) ? plata(saldoDe(p).saldo) : '—'}</td>
                   <td style={{ width: '5rem' }}><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setAbiertoPago(abiertoPago === p.id ? null : p.id) }}>{abiertoPago === p.id ? 'Cerrar' : 'Detalle'}</button></td>
                 </tr>
-                {abiertoPago === p.id && <tr key={`${p.id}-detalle`}><td colSpan={8}><div className="ob-pago-detalle">
+                {abiertoPago === p.id && <tr key={`${p.id}-detalle`}><td colSpan={9}><div className="ob-pago-detalle">
                   <b>{p.presupuesto || 'Pago suelto'}</b> · {p.rubro} / {p.subrubro || 'Sin tipo'}<br />
-                  {p.presupuesto_id && <span>Presupuesto asociado. Saldo actualizado disponible al editar o registrar otro pago.</span>}
+                  {saldoDe(p) && <><br /><span>Saldo pendiente actual: <b>{plata(saldoDe(p).saldo)}</b> · pagado: {plata(saldoDe(p).pagado)} · proyectado: {plata(saldoDe(p).proyectado)}</span></>}
+                  {p.cuota_id && <><br />Cuota asignada: {p.cuota_id}</>}
                   {p.notas && <><br />Notas: {p.notas}</>}
                   {p.anulado && <><br />Motivo de anulación: {p.anulado_motivo}</>}
                   {!p.anulado && <div className="ob-pago-detalle__acciones"><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setEditando(p) }}>Editar</button><button className="ob-btn" onClick={(e) => { e.stopPropagation(); anular(p) }}>Anular</button><Adjuntos obra={obra} colgar={{ pago_id: p.id }} tipo="factura" titulo="Comprobantes" provistos={documentos[p.id] ?? []} alCambiar={cargar} /></div>}
