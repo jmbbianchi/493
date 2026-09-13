@@ -30,6 +30,7 @@ export default function Pagar() {
   const [error, setError] = useState(null)
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [abiertoPago, setAbiertoPago] = useState(null)
   const [hecho, setHecho] = useState(null)
 
   const cargar = async () => {
@@ -144,13 +145,12 @@ export default function Pagar() {
                 <th>Presupuesto</th>
                 <th>Medio</th>
                 <th className="ob-num">Monto</th>
-                <th>Comprobante</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {pagos.map((p) => (
-                <tr key={p.id} className={p.anulado ? 'ob-pago--anulado' : undefined}>
+              {pagos.map((p) => <>
+                <tr key={p.id} className={p.anulado ? 'ob-pago--anulado' : undefined} onClick={() => setAbiertoPago(abiertoPago === p.id ? null : p.id)}>
                   <td>{fecha(p.fecha)}</td>
                   <td>{p.rubro}</td>
                   <td className="ob-table__sec">{p.subrubro || '—'}</td>
@@ -163,19 +163,17 @@ export default function Pagar() {
                   <td className="ob-num">
                     {p.moneda === 'USD' ? `u$d ${num(p.monto, 2)}` : plata(p.monto)}
                   </td>
-                  <td>
-                    <Adjuntos obra={obra} colgar={{ pago_id: p.id }} tipo="factura"
-                      titulo="" provistos={documentos[p.id] ?? []} alCambiar={cargar} />
-                  </td>
-                  <td style={{ width: '5rem' }}>
-                    {!p.anulado && <button className="ob-btn" onClick={() => setEditando(p)}>Editar</button>}
-                    {!p.anulado && (
-                      <button className="ob-btn" style={{ padding: '.05rem .4rem' }}
-                        onClick={() => anular(p)}>Anular</button>
-                    )}
-                  </td>
+                  <td style={{ width: '5rem' }}><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setAbiertoPago(abiertoPago === p.id ? null : p.id) }}>{abiertoPago === p.id ? 'Cerrar' : 'Detalle'}</button></td>
                 </tr>
-              ))}
+                {abiertoPago === p.id && <tr key={`${p.id}-detalle`}><td colSpan={8}><div className="ob-pago-detalle">
+                  <b>{p.presupuesto || 'Pago suelto'}</b> · {p.rubro} / {p.subrubro || 'Sin tipo'}<br />
+                  {p.presupuesto_id && <span>Presupuesto asociado. Saldo actualizado disponible al editar o registrar otro pago.</span>}
+                  {p.notas && <><br />Notas: {p.notas}</>}
+                  {p.anulado && <><br />Motivo de anulación: {p.anulado_motivo}</>}
+                  {!p.anulado && <div className="ob-pago-detalle__acciones"><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setEditando(p) }}>Editar</button><button className="ob-btn" onClick={(e) => { e.stopPropagation(); anular(p) }}>Anular</button><Adjuntos obra={obra} colgar={{ pago_id: p.id }} tipo="factura" titulo="Comprobantes" provistos={documentos[p.id] ?? []} alCambiar={cargar} /></div>}
+                </div></td></tr>}
+              </>
+              )}
             </tbody>
           </table>
         </div>

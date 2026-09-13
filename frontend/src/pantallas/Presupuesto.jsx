@@ -256,7 +256,7 @@ export default function Presupuesto() {
             <table className="ob-table">
               <thead>
                 <tr>
-                  <th>Fecha</th><th>Medio</th><th>Notas</th>
+                  <th>Fecha</th><th>Medio</th><th>Notas</th><th>% completado</th>
                   <th className="ob-num">Pagado</th>
                   <th className="ob-num">En pesos</th>
                 </tr>
@@ -269,6 +269,7 @@ export default function Presupuesto() {
                     <td className="ob-table__sec">
                       {g.anulado ? `anulado: ${g.anulado_motivo}` : (g.notas || '—')}
                     </td>
+                    <td className="ob-num">{t.nominal ? `${num(d.pagos.slice(0, d.pagos.indexOf(g) + 1).filter((x) => !x.anulado).reduce((a, x) => a + Number(x.monto), 0) / t.nominal * 100, 1)} %` : '—'}</td>
                     <td className="ob-num">
                       {g.moneda === 'USD' ? `u$d ${num(g.monto, 2)}` : plata(g.monto)}
                     </td>
