@@ -66,3 +66,12 @@ class EdicionPagoTests(unittest.TestCase):
         with patch('app.routers.pagos.db.execute', return_value=0):
             with self.assertRaises(HTTPException):
                 editar('obra', 'pago', PagoEdicion(fecha='2026-09-01', monto=100, medio='efectivo'))
+
+class FechasOpcionalesTests(unittest.TestCase):
+    def test_cuota_sin_fecha_conserva_nominal(self):
+        from app.routers.presupuestos import _con_coeficientes, PlanArmado
+        from app.routers.desembolsos import Fila
+        self.assertIsNone(PlanArmado(cuotas=1).fecha_inicio)
+        self.assertIsNone(Fila(descripcion='Saldo', monto_nominal=100).fecha_prevista)
+        c = _con_coeficientes([dict(indexa=True, fecha_prevista=None, monto_nominal=100)], date.today(), {}, {})[0]
+        self.assertEqual(c['monto_proyectado'],100)

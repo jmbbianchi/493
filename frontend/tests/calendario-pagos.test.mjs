@@ -54,3 +54,13 @@ test('tipo agrupa varios rubros y separa monedas', () => {
  assert.equal(tipos.find(t=>t.moneda==='ARS').hijos.length,2)
  assert.equal(tipos.find(t=>t.moneda==='ARS').semanas['2026-09-14'].estimado,22000)
 })
+
+test('pago historico sin cuota cubre presupuesto y saldo sin fecha no entra en semana', () => {
+ const p = {...presupuesto,id:'b',cuotas:[{...presupuesto.cuotas[0],fecha_prevista:null}]}
+ const filas = calendarioPagos([p],[{...pago,cuota_id:null,fecha:'2025-07-22'}],'2026-09-20')
+ const c = filas[0].semanas.sin_fecha
+ assert.equal(c.pendiente,6000)
+ assert.equal(c.parciales,1)
+ assert.equal(filas[0].semanas['2026-09-14'],undefined)
+ assert.equal(filas[0].semanas['2025-07-21'].pagado,4000)
+})

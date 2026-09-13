@@ -207,7 +207,7 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
     rubro_id: '', subrubro_id: subrubros[0]?.id ?? '', nombre: '',
     origen: 'monto', monto_base: '', moneda: 'ARS', fecha_base: hoy,
     anticipo_pct: 20, anticipo_indexa: false,
-    cuotas: 1, frecuencia: 'mensual', fecha_inicio: hoy, cuotas_indexan: true,
+    cuotas: 1, frecuencia: 'mensual', fecha_inicio: '', cuotas_indexan: true,
   })
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
@@ -234,11 +234,11 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
       if (d.origen === 'items') await api.put(`/api/obras/${obra.id}/presupuestos/${id}/items`, items.map((x) => ({ ...x, cantidad: Number(x.cantidad), precio_unitario: Number(x.precio_unitario) })))
       await api.put(`/api/obras/${obra.id}/presupuestos/${id}/plan`, {
         anticipo_pct: Number(d.anticipo_pct),
-        anticipo_fecha: d.fecha_base,
+        anticipo_fecha: d.fecha_inicio || null,
         anticipo_indexa: d.anticipo_indexa,
         cuotas: Number(d.cuotas),
         frecuencia: d.frecuencia,
-        fecha_inicio: d.fecha_inicio,
+        fecha_inicio: d.fecha_inicio || null,
         cuotas_indexan: d.cuotas_indexan,
       })
       alCrear()
@@ -303,8 +303,8 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
             <option value="quincenal">Quincenal</option>
             <option value="mensual">Mensual</option>
           </select></label>
-        <label><span className="ob-label">Primera cuota</span>
-          <input className="ob-input" type="date" required value={d.fecha_inicio}
+        <label><span className="ob-label">Primera cuota (fecha estimada, opcional)</span>
+          <input className="ob-input" type="date" value={d.fecha_inicio}
             onChange={set('fecha_inicio')} /></label>
         <label className="ob-alta__check">
           <input type="checkbox" checked={d.cuotas_indexan} onChange={set('cuotas_indexan')} />

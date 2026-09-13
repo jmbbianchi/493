@@ -53,7 +53,7 @@ class TramoNuevo(BaseModel):
     descripcion: str | None = None
     porcentaje: float | None = None
     monto_base: float | None = None
-    fecha_prevista: date
+    fecha_prevista: date | None = None
     indexa: bool = True
     indice_codigo: str = "IPC_NIVEL"
 
@@ -95,7 +95,7 @@ class PlanArmado(BaseModel):
     anticipo_indexa: bool = False
     cuotas: int = Field(ge=1, le=120)
     frecuencia: str = Field(default="semanal", pattern="^(semanal|quincenal|mensual)$")
-    fecha_inicio: date
+    fecha_inicio: date | None = None
     cuotas_indexan: bool = True
     indice_codigo: str = "IPC_NIVEL"
 
@@ -177,7 +177,7 @@ def _con_coeficientes(cuotas: list[dict], fecha_base: date, ancla: dict,
             n0 = _nivel_proyectado(mes_base_ant, ancla)
         nominal = Decimal(str(c["monto_nominal"]))
 
-        if not c["indexa"]:
+        if not c["indexa"] or not c["fecha_prevista"]:
             # Lo que no indexa vale lo mismo siempre. El anticipo es el
             # caso tipico: es justamente lo que congela el precio.
             fila["coeficiente_real"] = Decimal(1)
@@ -381,7 +381,7 @@ def _desarmar_plan(plan: PlanArmado) -> list[dict]:
             "orden": orden, "tipo": "cuota",
             "descripcion": f"Cuota {i + 1} de {plan.cuotas}",
             "porcentaje": float(por_cuota),
-            "fecha_prevista": plan.fecha_inicio + timedelta(days=paso * i),
+            "fecha_prevista": (plan.fecha_inicio + timedelta(days=paso * i)) if plan.fecha_inicio else None,
             "indexa": plan.cuotas_indexan,
         })
         orden += 1

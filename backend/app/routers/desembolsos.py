@@ -16,7 +16,7 @@ class Fila(BaseModel):
     id: UUID | None = None
     tipo: Literal["anticipo", "cuota"] = "cuota"
     descripcion: str = Field(min_length=1, max_length=200)
-    fecha_prevista: date
+    fecha_prevista: date | None = None
     monto_nominal: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
     indexa: bool = False
 
