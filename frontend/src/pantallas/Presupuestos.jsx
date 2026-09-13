@@ -7,7 +7,7 @@ import ItemsPresupuesto from '../componentes/ItemsPresupuesto'
 import { plata, num, fecha } from '../formato'
 
 /**
- * La comparativa: un renglón por rubro y sub-rubro con todas sus
+ * La comparativa: un renglón por rubro y tipo con todas sus
  * cotizaciones.
  *
  * Es la pantalla que contesta si te cotizaron caro, y la contesta de la
@@ -60,7 +60,7 @@ export default function Presupuestos() {
         <span className="ob-label">Presupuestos</span>
         <span className="ob-toolbar__meta">
           {grupos.length === 0 ? 'Ninguno cargado todavía'
-            : `${grupos.length} rubro/sub-rubro · elegido ${plata(totalElegido)} nominal`}
+            : `${grupos.length} rubro/tipo · elegido ${plata(totalElegido)} nominal`}
           <button className="ob-btn ob-btn--primario" onClick={() => setAlta(!alta)}
             style={{ marginLeft: 'var(--ob-gap-3)' }}>
             {alta ? 'Cancelar' : 'Cargar un presupuesto'}
@@ -89,7 +89,7 @@ export default function Presupuestos() {
             convierte «$85.000.000» en lo que realmente vas a terminar pagando.
           </p>
           <p>
-            Cargá varias cotizaciones del mismo rubro y sub-rubro y la app te
+            Cargá varias cotizaciones del mismo rubro y tipo y la app te
             muestra cuánto se separan. Después marcás cuál usás, y sólo ésa
             suma.
           </p>
@@ -255,7 +255,7 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
             <option value="">Elegí…</option>
             {rubros.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
           </SelectorCategoria></label>
-        <label><span className="ob-label">Sub-rubro</span>
+        <label><span className="ob-label">Tipo</span>
           <SelectorCategoria tipo="subrubros" className="ob-input" value={d.subrubro_id} onChange={set('subrubro_id')}>
             {subrubros.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
           </SelectorCategoria></label>

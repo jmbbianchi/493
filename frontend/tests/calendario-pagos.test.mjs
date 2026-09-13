@@ -45,3 +45,12 @@ test('colores distinguen cuotas y pagos sin compromiso', () => {
  assert.equal(estadoPago({pagado:4000,cuotas:0}),'completo')
  assert.equal(estadoPago(undefined),'')
 })
+
+import { agruparTipos } from '../src/calendarioPagos.js'
+test('tipo agrupa varios rubros y separa monedas', () => {
+ const filas = calendarioPagos([presupuesto, {...presupuesto, rubro_id:3, rubro:'Otro'}], [{...pago,moneda:'USD'}], '2026-09-20')
+ const tipos = agruparTipos(filas)
+ assert.equal(tipos.length,2)
+ assert.equal(tipos.find(t=>t.moneda==='ARS').hijos.length,2)
+ assert.equal(tipos.find(t=>t.moneda==='ARS').semanas['2026-09-14'].estimado,22000)
+})

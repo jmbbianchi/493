@@ -51,3 +51,18 @@ class PagosVinculadosTests(unittest.TestCase):
             self.assertTrue(any("INSERT INTO dbo.pago" in c.args[0] for c in cur.execute.call_args_list))
             self.assertTrue(any("UPDATE dbo.proyecto_avance" in c.args[0] for c in cur.execute.call_args_list))
             incrementar.assert_called_once_with(cur, "obra", 2)
+
+class EdicionPagoTests(unittest.TestCase):
+    def test_edicion_conserva_vinculos_y_limita_obra(self):
+        from app.routers.pagos import PagoEdicion, editar
+        with patch('app.routers.pagos.db.execute', return_value=1) as ejecutar:
+            editar('obra', 'pago', PagoEdicion(fecha='2026-09-01', monto='100.50', medio='efectivo'))
+            sql, params = ejecutar.call_args.args
+            self.assertIn('obra_id=%s AND anulado=0', sql)
+            self.assertNotIn('presupuesto_id=', sql)
+            self.assertEqual(params[-2:], ('pago', 'obra'))
+    def test_no_edita_anulado_o_ajeno(self):
+        from app.routers.pagos import PagoEdicion, editar
+        with patch('app.routers.pagos.db.execute', return_value=0):
+            with self.assertRaises(HTTPException):
+                editar('obra', 'pago', PagoEdicion(fecha='2026-09-01', monto=100, medio='efectivo'))

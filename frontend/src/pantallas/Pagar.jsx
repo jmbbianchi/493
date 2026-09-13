@@ -15,7 +15,7 @@ import CalendarioSemanalPagos from '../componentes/CalendarioSemanalPagos'
  * El criterio sigue siendo quince segundos parado en la obra. El modal lo
  * respeta porque las tres listas se encadenan y se saltean solas:
  *
- *  - Elegir el rubro filtra los sub-rubros que ese rubro tiene cargados.
+ *  - Elegir el rubro filtra los tipos que ese rubro tiene cargados.
  *  - Si sólo hay uno, queda puesto y no hay nada que elegir.
  *  - Si esa combinación tiene un solo presupuesto en uso, queda puesto.
  *
@@ -29,6 +29,7 @@ export default function Pagar() {
   const [documentos, setDocumentos] = useState({})
   const [error, setError] = useState(null)
   const [abierto, setAbierto] = useState(false)
+  const [editando, setEditando] = useState(null)
   const [hecho, setHecho] = useState(null)
 
   const cargar = async () => {
@@ -107,6 +108,7 @@ export default function Pagar() {
         </div>
       )}
 
+      {editando && <Modal titulo="Editar pago" bajada="Corregí los datos del pago. Los comprobantes y su asignación se conservan; los avances de obra mantienen su fecha." alCerrar={() => setEditando(null)}><EditarPago pago={editando} obraId={obra.id} alGuardar={() => { setEditando(null); setHecho(null); cargar(); tocado() }} /></Modal>}
       {abierto && (
         <Modal titulo="Registrar un pago"
           bajada="Lo que acabás de pagar. La fecha viene en hoy y se puede diferir."
@@ -138,7 +140,7 @@ export default function Pagar() {
               <tr>
                 <th>Fecha</th>
                 <th>Rubro</th>
-                <th>Sub-rubro</th>
+                <th>Tipo</th>
                 <th>Presupuesto</th>
                 <th>Medio</th>
                 <th className="ob-num">Monto</th>
@@ -166,6 +168,7 @@ export default function Pagar() {
                       titulo="" provistos={documentos[p.id] ?? []} alCambiar={cargar} />
                   </td>
                   <td style={{ width: '5rem' }}>
+                    {!p.anulado && <button className="ob-btn" onClick={() => setEditando(p)}>Editar</button>}
                     {!p.anulado && (
                       <button className="ob-btn" style={{ padding: '.05rem .4rem' }}
                         onClick={() => anular(p)}>Anular</button>
@@ -232,7 +235,7 @@ function Formulario({ obra, destinos, alGuardar }) {
     String(p.rubro_id) === String(rubroId)
     && (!subrubroId || String(p.subrubro_id) === String(subrubroId)))
 
-  // Cascada: elegir el rubro deja puesto el sub-rubro y el presupuesto
+  // Cascada: elegir el rubro deja puesto el tipo y el presupuesto
   // cuando no hay nada que decidir. Es lo que sostiene los quince segundos.
   const elegirRubro = (id) => {
     setRubroId(id)
@@ -305,7 +308,7 @@ function Formulario({ obra, destinos, alGuardar }) {
         </SelectorCategoria>
       </label>
 
-      <label className="ob-campo"><span className="ob-label">Sub-rubro</span>
+      <label className="ob-campo"><span className="ob-label">Tipo</span>
         <SelectorCategoria tipo="subrubros" className="ob-input" value={subrubroId}
           onChange={(e) => elegirSubrubro(e.target.value)}>
           <option value="">Sin especificar</option>
@@ -428,4 +431,23 @@ function Formulario({ obra, destinos, alGuardar }) {
       </button>
     </form>
   )
+}
+
+function EditarPago({ pago, obraId, alGuardar }) {
+  const [datos, setDatos] = useState({fecha: pago.fecha.slice(0,10), monto: String(pago.monto), medio: pago.medio, notas: pago.notas || ''})
+  const [error, setError] = useState(null)
+  const [ocupado, setOcupado] = useState(false)
+  const campo = (nombre) => ({value: datos[nombre], onChange: e => setDatos({...datos, [nombre]: e.target.value})})
+  return <form onSubmit={async e => {
+    e.preventDefault(); setOcupado(true); setError(null)
+    try { await api.patch(`/api/obras/${obraId}/pagos/${pago.id}`, {...datos, monto: datos.monto}); alGuardar() }
+    catch (err) { setError(err); setOcupado(false) }
+  }}>
+    <Aviso error={error} alCerrar={() => setError(null)} />
+    <label className="ob-campo">Fecha<input className="ob-input" type="date" required {...campo('fecha')} /></label>
+    <label className="ob-campo">Monto ({pago.moneda})<input className="ob-input" type="number" min="0.01" step="0.01" required {...campo('monto')} /></label>
+    <label className="ob-campo">Medio<select className="ob-input" {...campo('medio')}>{['transferencia','efectivo','cheque','otro'].map(m => <option key={m}>{m}</option>)}</select></label>
+    <label className="ob-campo">Notas<input className="ob-input" {...campo('notas')} /></label>
+    <button className="ob-btn ob-btn--primario" disabled={ocupado}>{ocupado ? 'Guardando…' : 'Guardar cambios'}</button>
+  </form>
 }

@@ -9,7 +9,7 @@ export function calendarioPagos(presupuestos, pagos, hoy) {
   const grupos = new Map(), cuotas = new Map()
   function celda(r, fecha) {
     const key = `${r.rubro_id}/${r.subrubro_id ?? ''}/${r.moneda}`
-    if (!grupos.has(key)) grupos.set(key, { key, rubro_id: r.rubro_id, rubro: r.rubro, subrubro: r.subrubro || 'Sin subrubro', moneda: r.moneda, semanas: {} })
+    if (!grupos.has(key)) grupos.set(key, { key, subrubro_id: r.subrubro_id, rubro_id: r.rubro_id, rubro: r.rubro, subrubro: r.subrubro || 'Sin tipo', moneda: r.moneda, semanas: {} })
     const g = grupos.get(key), s = semana(fecha)
     return g.semanas[s] ??= { pactado: 0, estimado: 0, sinEstimacion: false, pagado: 0, pendiente: 0, sinImputar: 0, diferido: 0, cuotas: 0, completas: 0, parciales: 0 }
   }
@@ -57,4 +57,19 @@ export function estadoPago(c) {
   if (!c) return ''
   if (c.cuotas) return c.completas === c.cuotas ? 'completo' : c.completas || c.parciales ? 'parcial' : 'pendiente'
   return c.diferido ? (c.pagado ? 'parcial' : 'pendiente') : c.pagado ? 'completo' : ''
+}
+
+export function agruparTipos(filas) {
+  const tipos = new Map()
+  for (const fila of filas) {
+    const key = `${fila.subrubro_id ?? ''}/${fila.moneda}`
+    if (!tipos.has(key)) tipos.set(key, { key, subrubro: fila.subrubro, moneda: fila.moneda, hijos: [], semanas: {} })
+    const tipo = tipos.get(key)
+    tipo.hijos.push(fila)
+    for (const [semana, celda] of Object.entries(fila.semanas)) {
+      const total = tipo.semanas[semana] ??= {}
+      for (const [campo, valor] of Object.entries(celda)) total[campo] = campo === 'sinEstimacion' ? Boolean(total[campo] || valor) : (total[campo] || 0) + valor
+    }
+  }
+  return [...tipos.values()]
 }

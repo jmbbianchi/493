@@ -186,6 +186,23 @@ def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None
     return db.query(sql, params)
 
 
+class PagoEdicion(BaseModel):
+    fecha: date
+    monto: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
+    medio: str = Field(pattern="^(transferencia|efectivo|cheque|otro)$")
+    notas: str | None = None
+
+
+@router.patch("/pagos/{pago_id}")
+def editar(obra_id: str, pago_id: str, p: PagoEdicion):
+    n = db.execute("""UPDATE dbo.pago SET fecha=%s, monto=%s, medio=%s, notas=%s
+        WHERE id=%s AND obra_id=%s AND anulado=0""",
+        (p.fecha, p.monto, p.medio, p.notas, pago_id, obra_id))
+    if not n:
+        raise HTTPException(404, "No existe ese pago o está anulado.")
+    return {"id": pago_id}
+
+
 @router.post("/pagos/{pago_id}/anular")
 def anular(obra_id: str, pago_id: str, a: Anulacion):
     """Anular es corregir un error de carga, no hacer desaparecer plata:

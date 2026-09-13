@@ -29,7 +29,7 @@ export default function SelectorCategoria({ tipo, children, onChange, ...props }
     </select>
     {nombre !== null && <span style={{ display: 'grid', gap: '.4rem', marginTop: '.5rem' }}>
       <input className="ob-input" aria-label="Nombre de la categoría nueva" maxLength={60}
-        placeholder={tipo === 'rubros' ? 'Nombre del rubro' : 'Nombre del subrubro'}
+        placeholder={tipo === 'rubros' ? 'Nombre del rubro' : 'Nombre del tipo'}
         value={nombre} onChange={(e) => setNombre(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (nombre.trim() && !ocupado) guardar() } }} />
       <span><button type="button" className="ob-btn" disabled={ocupado || !nombre.trim()} onClick={guardar}>{ocupado ? 'Guardando…' : 'Agregar y seleccionar'}</button>
