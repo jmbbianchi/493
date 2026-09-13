@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useOutletContext, Link } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
+import ItemsPresupuesto from '../componentes/ItemsPresupuesto'
 import { plata, num, fecha } from '../formato'
 
 /**
@@ -199,6 +200,8 @@ export default function Presupuestos() {
  * se edita.
  */
 function Alta({ obra, rubros, subrubros, alCrear }) {
+  const [items, setItems] = useState([{ descripcion: '', cantidad: 1, unidad: '', precio_unitario: '' }])
+  const [creadoId, setCreadoId] = useState(null)
   const hoy = new Date().toISOString().slice(0, 10)
   const [d, setD] = useState({
     rubro_id: '', subrubro_id: subrubros[0]?.id ?? '', nombre: '',
@@ -216,7 +219,8 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
     e.preventDefault()
     setGuardando(true)
     try {
-      const { id } = await api.post(`/api/obras/${obra.id}/presupuestos`, {
+      if (d.origen === 'items' && items.length === 0) throw new Error('Agregá al menos un artículo.')
+      const { id } = creadoId ? { id: creadoId } : await api.post(`/api/obras/${obra.id}/presupuestos`, {
         rubro_id: Number(d.rubro_id),
         subrubro_id: Number(d.subrubro_id),
         nombre: d.nombre,
@@ -226,6 +230,8 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
         moneda: d.moneda,
         fecha_base: d.fecha_base,
       })
+      setCreadoId(id)
+      if (d.origen === 'items') await api.put(`/api/obras/${obra.id}/presupuestos/${id}/items`, items.map((x) => ({ ...x, cantidad: Number(x.cantidad), precio_unitario: Number(x.precio_unitario) })))
       await api.put(`/api/obras/${obra.id}/presupuestos/${id}/plan`, {
         anticipo_pct: Number(d.anticipo_pct),
         anticipo_fecha: d.fecha_base,
@@ -276,6 +282,7 @@ function Alta({ obra, rubros, subrubros, alCrear }) {
             onChange={set('fecha_base')} /></label>
       </div>
 
+      {d.origen === 'items' && <ItemsPresupuesto items={items} onChange={setItems} />}
       <p className="ob-alta__titulo">
         El plan de pago — es lo que convierte el monto en el número real
       </p>

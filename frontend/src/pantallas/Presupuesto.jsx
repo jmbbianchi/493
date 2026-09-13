@@ -3,6 +3,7 @@ import { useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
 import Adjuntos from '../componentes/Adjuntos'
+import ItemsPresupuesto from '../componentes/ItemsPresupuesto'
 import Modal from '../componentes/Modal'
 import { plata, num, fecha } from '../formato'
 
@@ -22,6 +23,7 @@ export default function Presupuesto() {
   const [error, setError] = useState(null)
 
   const [items, setItems] = useState([])
+  const [guardandoItems, setGuardandoItems] = useState(false)
   const [editando, setEditando] = useState(null)
 
   const cargar = () => {
@@ -124,7 +126,15 @@ export default function Presupuesto() {
         </div>
       )}
 
-      {items.length > 0 && (
+      {borrador && p.origen === 'items' && <form className="ob-card" style={{ padding: '1rem' }} onSubmit={async (e) => {
+        e.preventDefault(); setGuardandoItems(true)
+        try {
+          if (!items.length) throw new Error('Agregá al menos un artículo.')
+          await api.put(`/api/obras/${obra.id}/presupuestos/${presupuestoId}/items`, items.map((x) => ({ descripcion: x.descripcion, unidad: x.unidad || null, cantidad: Number(x.cantidad), precio_unitario: Number(x.precio_unitario) })))
+          cargar()
+        } catch (err) { setError(err) } finally { setGuardandoItems(false) }
+      }}><ItemsPresupuesto items={items} onChange={setItems} /><button className="ob-btn ob-btn--primario" disabled={guardandoItems}>Guardar artículos</button></form>}
+      {items.length > 0 && !borrador && (
         <>
           <div className="ob-toolbar" style={{ borderTop: 'var(--ob-border)' }}>
             <span className="ob-label">Artículos cotizados</span>
