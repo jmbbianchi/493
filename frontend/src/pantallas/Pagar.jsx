@@ -57,6 +57,14 @@ export default function Pagar() {
     } catch (e) { setError(e) }
   }
 
+  const eliminar = async (p) => {
+    if (!window.confirm(`¿Eliminar definitivamente el pago de ${p.moneda} ${num(p.monto,2)} del ${fecha(p.fecha)}? Se recalcularán los saldos. Los comprobantes quedarán en Documentación y los avances de obra se conservarán.`)) return
+    try {
+      await api.borrar(`/api/obras/${obra.id}/pagos/${p.id}`)
+      setAbiertoPago(null); setHecho(null); await cargar(); tocado()
+    } catch (e) { setError(e) }
+  }
+
   if (error) return <Aviso error={error} alCerrar={() => setError(null)} />
   if (!destinos) return <p className="ob-cargando">Cargando…</p>
 
@@ -175,6 +183,7 @@ export default function Pagar() {
                   {p.cuota_id && <><br />Cuota asignada: {p.cuota_id}</>}
                   {p.notas && <><br />Notas: {p.notas}</>}
                   {p.anulado && <><br />Motivo de anulación: {p.anulado_motivo}</>}
+                  <div><button className="ob-btn" onClick={() => eliminar(p)}>Eliminar definitivamente</button></div>
                   {!p.anulado && <div className="ob-pago-detalle__acciones"><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setEditando(p) }}>Editar</button><button className="ob-btn" onClick={(e) => { e.stopPropagation(); anular(p) }}>Anular</button><Adjuntos obra={obra} colgar={{ pago_id: p.id }} tipo="factura" titulo="Comprobantes" provistos={documentos[p.id] ?? []} alCambiar={cargar} /></div>}
                 </div></td></tr>}
               </>
@@ -439,7 +448,7 @@ function Formulario({ obra, destinos, alGuardar }) {
 }
 
 function EditarPago({ pago, obraId, alGuardar }) {
-  const [datos, setDatos] = useState({fecha: pago.fecha.slice(0,10), monto: String(pago.monto), medio: pago.medio, notas: pago.notas || ''})
+  const [datos, setDatos] = useState({fecha: pago.fecha.slice(0,10), monto: String(pago.monto), moneda: pago.moneda, medio: pago.medio, notas: pago.notas || ''})
   const [error, setError] = useState(null)
   const [ocupado, setOcupado] = useState(false)
   const campo = (nombre) => ({value: datos[nombre], onChange: e => setDatos({...datos, [nombre]: e.target.value})})
@@ -450,7 +459,9 @@ function EditarPago({ pago, obraId, alGuardar }) {
   }}>
     <Aviso error={error} alCerrar={() => setError(null)} />
     <label className="ob-campo">Fecha<input className="ob-input" type="date" required {...campo('fecha')} /></label>
-    <label className="ob-campo">Monto ({pago.moneda})<input className="ob-input" type="number" min="0.01" step="0.01" required {...campo('monto')} /></label>
+    <label className="ob-campo">Moneda<select className="ob-input" {...campo('moneda')}><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select></label>
+    <label className="ob-campo">Monto ({datos.moneda})<input className="ob-input" type="number" min="0.01" step="0.01" required {...campo('monto')} /></label>
+    <p>Cambiar la moneda corrige el registro y conserva el número ingresado; no convierte el importe.</p>
     <label className="ob-campo">Medio<select className="ob-input" {...campo('medio')}>{['transferencia','efectivo','cheque','otro'].map(m => <option key={m}>{m}</option>)}</select></label>
     <label className="ob-campo">Notas<input className="ob-input" {...campo('notas')} /></label>
     <button className="ob-btn ob-btn--primario" disabled={ocupado}>{ocupado ? 'Guardando…' : 'Guardar cambios'}</button>

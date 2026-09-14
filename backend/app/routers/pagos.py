@@ -168,6 +168,7 @@ def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None
 
 
 class PagoEdicion(BaseModel):
+    moneda: str | None = Field(default=None, pattern="^(ARS|USD)$")
     fecha: date
     monto: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
     medio: str = Field(pattern="^(transferencia|efectivo|cheque|otro)$")
@@ -176,12 +177,24 @@ class PagoEdicion(BaseModel):
 
 @router.patch("/pagos/{pago_id}")
 def editar(obra_id: str, pago_id: str, p: PagoEdicion):
-    n = db.execute("""UPDATE dbo.pago SET fecha=%s, monto=%s, medio=%s, notas=%s
+    n = db.execute("""UPDATE dbo.pago SET fecha=%s, monto=%s, medio=%s, notas=%s, moneda=COALESCE(%s,moneda)
         WHERE id=%s AND obra_id=%s AND anulado=0""",
-        (p.fecha, p.monto, p.medio, p.notas, pago_id, obra_id))
+        (p.fecha, p.monto, p.medio, p.notas, p.moneda, pago_id, obra_id))
     if not n:
         raise HTTPException(404, "No existe ese pago o está anulado.")
     return {"id": pago_id}
+
+
+@router.delete("/pagos/{pago_id}")
+def eliminar(obra_id: str, pago_id: str):
+    with db.cursor() as cur:
+        cur.execute('SELECT id FROM dbo.pago WITH (UPDLOCK,HOLDLOCK) WHERE id=%s AND obra_id=%s', (pago_id,obra_id))
+        if not cur.fetchone():
+            raise HTTPException(404, 'No existe ese pago en esta obra.')
+        # Los archivos siguen disponibles en Documentación, sin referencia rota.
+        cur.execute('UPDATE dbo.documento SET pago_id=NULL WHERE pago_id=%s AND obra_id=%s', (pago_id,obra_id))
+        cur.execute('DELETE FROM dbo.pago WHERE id=%s AND obra_id=%s', (pago_id,obra_id))
+    return {'eliminado': True}
 
 
 @router.post("/pagos/{pago_id}/anular")
