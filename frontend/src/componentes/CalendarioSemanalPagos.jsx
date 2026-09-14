@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as api from '../api'
-import { calendarioPagos, semana, agruparTipos, estadoPago } from '../calendarioPagos'
+import { calendarioPagos, semana, agruparTipos, estadoPago, importeCalendario } from '../calendarioPagos'
 import { num } from '../formato'
 import '../styles/calendario-pagos.css'
 
@@ -35,7 +35,7 @@ Pagos diferidos: ${importe(c.diferido || 0)}`
     const c = g.semanas[s]
     const texto = c ? describir(g, s, c) : ''
     return <td key={s} className={estadoPago(c)}>{c ? <button className="cp-celda" title={texto} aria-label={texto} onClick={() => setDetalle(texto)}>
-      {c.sinEstimacion ? 'Sin estimación' : c.cuotas ? importe(c.pagado > 0 ? c.pendiente : c.estimado) : importe(c.pagado + c.diferido)}
+      {importeCalendario(c) == null ? 'Sin estimación' : importe(importeCalendario(c))}
     </button> : '—'}</td>
   })
   return <section className="cp-panel">

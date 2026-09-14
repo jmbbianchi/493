@@ -5,6 +5,13 @@ export function semana(fecha) {
 }
 const centavos = (v) => Math.round(Number(v) * 100)
 
+export function importeCalendario(c) {
+  if (!c.cuotas) return c.pagado + c.diferido
+  // La cobertura pertenece a la cuota, aunque se haya pagado en otra semana.
+  if (c.parciales || c.completas) return c.pendiente
+  return c.sinEstimacion ? null : c.estimado
+}
+
 export function calendarioPagos(presupuestos, pagos, hoy) {
   const grupos = new Map(), cuotas = new Map(), libres = new Map()
   function celda(r, fecha) {

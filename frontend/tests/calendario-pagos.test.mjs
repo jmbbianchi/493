@@ -1,5 +1,19 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { importeCalendario } from '../src/calendarioPagos.js'
+
+test('parcial sin fecha muestra saldo aunque se pagó en otra semana', () => {
+ const p={id:'b',rubro_id:1,moneda:'USD',cuotas:[{id:'c',estado:'pendiente',fecha_prevista:null,monto_nominal:33600,monto_proyectado:33600}]}
+ const pago={...p,fecha:'2025-06-02',monto:6600,presupuesto_id:'b',cuota_id:null}
+ const filas=calendarioPagos([p],[pago],'2026-09-20')
+ assert.equal(importeCalendario(filas[0].semanas.sin_fecha),2700000)
+ assert.equal(importeCalendario(agruparTipos(filas)[0].semanas.sin_fecha),2700000)
+})
+
+test('cuota parcialmente cubierta muestra pendiente y pagada muestra cero', () => {
+ assert.equal(importeCalendario({cuotas:1,parciales:1,completas:0,pendiente:423000000,estimado:445362568,pagado:0}),423000000)
+ assert.equal(importeCalendario({cuotas:1,parciales:0,completas:1,pendiente:0,estimado:10000,pagado:0}),0)
+})
 
 test('pago en pesos cubre presupuesto USD con valor convertido histórico', () => {
  const p={id:'b',rubro_id:1,moneda:'USD',cuotas:[{id:'c',estado:'pendiente',fecha_prevista:'2026-09-15',monto_nominal:33600,monto_proyectado:33600}]}
