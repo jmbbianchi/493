@@ -78,7 +78,15 @@ def sincronizar_oficial(http, hoy):
         db.execute('''IF NOT EXISTS(SELECT 1 FROM dbo.indice WHERE codigo=%s)
             INSERT dbo.indice(codigo,nombre,fuente,periodicidad) VALUES(%s,%s,'ARGENTINADATOS','diaria')''',
             (codigo,codigo,nombre))
-    return _cargar(filas)
+    codigos={'USD_OFICIAL_COMPRA','USD_OFICIAL_VENTA'}
+    historia=any(_necesita_historia(c) for c in codigos)
+    refresco=hoy-dt.timedelta(days=REFRESCO_DIAS)
+    cantidad=_cargar(filas if historia else [f for f in filas if f[1]>=refresco])
+    for codigo in codigos:
+        fechas=[f[1] for f in filas if f[0]==codigo]
+        if fechas:
+            db.execute('UPDATE dbo.indice SET backfill_ok=1,desde_real=%s WHERE codigo=%s',(min(fechas),codigo))
+    return cantidad
 
 VARIABLES = {
     4:  "USD_MINORISTA",
@@ -125,8 +133,13 @@ def _cargar(filas: list) -> int:
         return 0
     with db.cursor() as cur:
         cur.execute(STAGE_DDL)
-        for i in range(0, len(filas), 1000):
-            cur.executemany(STAGE_INS, filas[i:i + 1000])
+        # pymssql.executemany envía una orden por fila. El histórico nuevo
+        # necesita lotes reales para no hacer miles de viajes a Azure SQL.
+        for i in range(0, len(filas), 500):
+            lote=filas[i:i + 500]
+            cur.execute('INSERT INTO #idx_stage (codigo,fecha,valor) VALUES '+
+                        ','.join(['(%s,%s,%s)']*len(lote)),
+                        tuple(v for fila in lote for v in fila))
         cur.execute(STAGE_MERGE)
     return len(filas)
 
