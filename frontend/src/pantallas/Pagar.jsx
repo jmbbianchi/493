@@ -78,7 +78,7 @@ export default function Pagar() {
 
   return (
     <>
-      <CalendarioSemanalPagos key={obra.id} obraId={obra.id} destinos={destinos} pagos={pagos} />
+      <CalendarioSemanalPagos key={obra.id} obraId={obra.id} superficie={obra.sup_cubierta} destinos={destinos} pagos={pagos} />
       <div className="ob-toolbar">
         <span className="ob-label">Registrar Pago</span>
         <span className="ob-toolbar__meta">
