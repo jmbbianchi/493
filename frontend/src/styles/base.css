@@ -491,7 +491,7 @@ body {
 .ob-comp__flecha { color: var(--ob-ink-3); width: 1rem; }
 .ob-comp__rubro { font-weight: var(--ob-fw-semi); font-size: var(--ob-fs-md); }
 .ob-comp__sub { font-weight: var(--ob-fw-normal); color: var(--ob-ink-2); }
-.ob-comp__cifras { margin-left: auto; display: flex; gap: var(--ob-gap-5); }
+.ob-comp__cifras { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ob-gap-5); }
 .ob-comp__dato { display: grid; gap: 1px; justify-items: end; }
 .ob-comp__dato .ob-num { font-size: var(--ob-fs-sm); font-weight: var(--ob-fw-semi); }
 .ob-comp__tabla { border-top: 1px solid var(--ob-line-strong); }

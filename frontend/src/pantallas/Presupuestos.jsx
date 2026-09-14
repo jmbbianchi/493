@@ -27,14 +27,22 @@ export default function Presupuestos() {
   const [error, setError] = useState(null)
   const [alta, setAlta] = useState(false)
   const [abierto, setAbierto] = useState({})
+  const [saldos, setSaldos] = useState({})
 
   const cargar = async () => {
     try {
-      const [c, r, s] = await Promise.all([
+      const [c, r, s, destinos] = await Promise.all([
         api.get(`/api/obras/${obra.id}/comparativa`),
         api.get(`/api/obras/${obra.id}/rubros`),
         api.get(`/api/obras/${obra.id}/subrubros`),
+        api.get(`/api/obras/${obra.id}/pagar-destinos`),
       ])
+      const resumen = Object.fromEntries(destinos.presupuestos.map(p => [p.id, p]))
+      await Promise.all(c.grupos.flatMap(g => g.cotizaciones).filter(p => p.estado === 'confirmado' && !resumen[p.id]).map(async p => {
+        const detalle = await api.get(`/api/obras/${obra.id}/presupuestos/${p.id}`)
+        resumen[p.id] = {...detalle.total, moneda: p.moneda}
+      }))
+      setSaldos(resumen)
       setDatos(c); setRubros(r); setSubrubros(s)
     } catch (e) { setError(e) }
   }
@@ -53,6 +61,12 @@ export default function Presupuestos() {
   const grupos = datos.grupos
   const totalElegido = ['ARS','USD'].map(m=>`${m} ${num(grupos.filter(g=>g.elegido_moneda===m).reduce((a,g)=>a+(g.elegido_monto || 0),0),2)}`).join(' · ')
   const sinElegir = grupos.filter((g) => !g.elegido_id).length
+  const importeSaldo = (id, campo) => {
+    const saldo = saldos[id]
+    if (!saldo) return '—'
+    if (saldo[campo] == null || (campo === 'pagado' && saldo.pagos_sin_convertir)) return 'Sin cotización'
+    return `${saldo.moneda} ${num(saldo[campo],2)}`
+  }
 
   return (
     <>
@@ -131,6 +145,14 @@ export default function Presupuestos() {
                     {g.elegido_monto == null ? 'ninguno' : `${g.elegido_moneda} ${num(g.elegido_monto,2)}`}
                   </b>
                 </span>
+                <span className="ob-comp__dato" title="Pagos aplicados al presupuesto elegido, en su moneda">
+                  <b className="ob-label">Pagado</b>
+                  <b className="ob-num">{importeSaldo(g.elegido_id, 'pagado')}</b>
+                </span>
+                <span className="ob-comp__dato" title="Saldo del presupuesto elegido: mismo valor que en Gastos y compras">
+                  <b className="ob-label">Saldo pendiente</b>
+                  <b className="ob-num">{importeSaldo(g.elegido_id, 'saldo')}</b>
+                </span>
               </span>
             </button>
 
@@ -143,6 +165,8 @@ export default function Presupuestos() {
                     <th>Base</th>
                     <th>Cómo</th>
                     <th className="ob-num">Monto</th>
+                    <th className="ob-num">Pagado</th>
+                    <th className="ob-num">Saldo pendiente</th>
                     <th>Estado</th>
                     <th></th>
                   </tr>
@@ -170,6 +194,8 @@ export default function Presupuestos() {
                           </span>
                         )}
                       </td>
+                      <td className="ob-num">{importeSaldo(c.id, 'pagado')}</td>
+                      <td className="ob-num">{importeSaldo(c.id, 'saldo')}</td>
                       <td>
                         <span className={`ob-chip ob-chip--${
                           c.estado === 'confirmado' ? 'ok' : 'mudo'}`}>{c.estado}</span>
