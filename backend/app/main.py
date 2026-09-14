@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
 from .routers import (calculadora, computo, cronograma, documentos, obras,
-                      pagos, presupuestos, usuarios, proyecto, financiacion, desembolsos)
+                      pagos, presupuestos, usuarios, proyecto, financiacion, desembolsos, calendario)
 
 app = FastAPI(title="obra493", docs_url="/docs")
 
@@ -53,6 +53,7 @@ app.include_router(usuarios.router)
 app.include_router(proyecto.router)
 app.include_router(financiacion.router)
 app.include_router(desembolsos.router)
+app.include_router(calendario.router)
 
 
 @app.get("/health")
@@ -78,3 +79,7 @@ def ultimo_indice(codigo: str):
 @app.get('/api/indices/historia')
 def historia_indice(codigo: str, hasta: date):
     return db.query('SELECT TOP 120 fecha,valor FROM dbo.indice_valor WHERE codigo=%s AND fecha<=%s ORDER BY fecha DESC', (codigo,hasta))
+
+@app.get('/api/indices/dolar-calendario')
+def dolar_calendario():
+    return db.query("SELECT fecha,valor FROM dbo.indice_valor WHERE codigo='USD_MINORISTA' AND valor>0 AND fecha<=%s ORDER BY fecha", (date.today(),))
