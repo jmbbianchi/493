@@ -17,6 +17,7 @@ const SECCIONES = [
   ['calculadora', 'Calculadora de materiales'],
   ['documentacion', 'Documentación y parámetros'],
   ['financiacion', 'Financiación'],
+  ['cotizaciones', 'Cotizaciones'],
 ]
 
 // El alta de obra cuelga del mismo selector y no de un boton aparte: es

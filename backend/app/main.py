@@ -10,6 +10,7 @@ PROHIBIDO en este archivo (reglas de la auditoria de jun-2026):
 El contenedor tiene que poder dormirse. Si no se duerme, factura.
 """
 import os
+from datetime import date
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,3 +74,7 @@ def ultimo_indice(codigo: str):
         (codigo,),
     )
     return filas[0] if filas else {"detail": "sin datos"}
+
+@app.get('/api/indices/historia')
+def historia_indice(codigo: str, hasta: date):
+    return db.query('SELECT TOP 120 fecha,valor FROM dbo.indice_valor WHERE codigo=%s AND fecha<=%s ORDER BY fecha DESC', (codigo,hasta))

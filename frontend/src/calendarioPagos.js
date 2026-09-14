@@ -25,11 +25,14 @@ export function calendarioPagos(presupuestos, pagos, hoy) {
     if (p.fecha.slice(0,10) > hoy) { cell.diferido += monto; continue }
     cell.pagado += monto
     const cuota = cuotas.get(String(p.cuota_id))
-    if (cuota && cuota.moneda === p.moneda) cuota.cubierto += monto
+    const convertido = p.monto_presupuesto == null ? null : centavos(p.monto_presupuesto)
+    const monedaCobertura = p.moneda_presupuesto || p.moneda
+    const cobertura = monedaCobertura === p.moneda ? monto : convertido
+    if (cuota && cuota.moneda === monedaCobertura && cobertura != null) cuota.cubierto += cobertura
     else if (p.presupuesto_id) {
       if (!presupuestos.some(b=>String(b.id)===String(p.presupuesto_id) && b.moneda===p.moneda)) cell.sinImputar += monto
-      const key = `${p.presupuesto_id}/${p.moneda}`
-      libres.set(key, (libres.get(key) || 0) + monto)
+      const key = `${p.presupuesto_id}/${monedaCobertura}`
+      libres.set(key, (libres.get(key) || 0) + (cobertura || 0))
     }
   }
   // Apply unallocated budget payments to the earliest remaining commitments.

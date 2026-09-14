@@ -1,5 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+
+test('pago en pesos cubre presupuesto USD con valor convertido histórico', () => {
+ const p={id:'b',rubro_id:1,moneda:'USD',cuotas:[{id:'c',estado:'pendiente',fecha_prevista:'2026-09-15',monto_nominal:33600,monto_proyectado:33600}]}
+ const pago={...p,fecha:'2025-06-02',monto:1600000,moneda:'ARS',presupuesto_id:'b',cuota_id:null,moneda_presupuesto:'USD',monto_presupuesto:1600}
+ const filas=calendarioPagos([p],[pago],'2026-09-20')
+ assert.equal(filas.find(g=>g.moneda==='USD').semanas['2026-09-14'].pendiente,3200000)
+})
 import { calendarioPagos, semana } from '../src/calendarioPagos.js'
 const presupuesto = { rubro_id: 1, rubro: 'Hormigón', subrubro_id: 2, subrubro: 'Materiales', moneda: 'ARS', cuotas: [{ id: 'c', estado: 'pendiente', fecha_prevista: '2026-09-15', monto_nominal: 100, monto_proyectado: 110 }] }
 const pago = { ...presupuesto, id: 'p', presupuesto_id: 'b', cuota_id: 'c', fecha: '2026-09-14', monto: 40 }

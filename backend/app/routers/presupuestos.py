@@ -502,6 +502,9 @@ def ver(obra_id: str, presupuesto_id: str):
     total["avance_pago_pct"] = (float(pagado) / total["proyectado"] * 100
                                 if total["proyectado"] else None)
     total["pagos_sin_convertir"] = sin_convertir
+    from ..monedas import pagos_convertidos, saldo
+    pagos_convertidos(pagos, p['moneda'])
+    total.update(saldo(pagos, p['moneda'], total['nominal'], total['proyectado']))
 
     return {
         "presupuesto": {k: (str(v) if k == "id" else v) for k, v in p.items()},
@@ -753,8 +756,13 @@ def comparativa(obra_id: str):
         montos = [c["monto_base"] for c in g["cotizaciones"]
                   if c["estado"] == "confirmado" and c["monto_base"] > 0]
         elegido = next((c for c in g["cotizaciones"] if c["elegido"]), None)
+        monedas = {c['moneda'] for c in g['cotizaciones']}
+        if len(monedas) > 1:
+            montos = []
         salida.append({
             **g,
+            'moneda': next(iter(monedas)) if len(monedas) == 1 else None,
+            'elegido_moneda': elegido['moneda'] if elegido else None,
             "cantidad": len(g["cotizaciones"]),
             "mas_barato": min(montos) if montos else None,
             "mas_caro": max(montos) if montos else None,

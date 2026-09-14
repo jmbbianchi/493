@@ -62,6 +62,7 @@ export default function Pagar() {
 
   const vivos = pagos.filter((p) => !p.anulado)
   const saldoDe = (p) => p.presupuesto_id ? destinos.presupuestos.find((x) => x.id === p.presupuesto_id) : null
+  const importeSaldo = (p, campo='saldo') => saldoDe(p)?.[campo] == null ? 'Sin cotización' : `${saldoDe(p).moneda} ${num(saldoDe(p)[campo],2)}`
   const totalArs = vivos.filter((p) => p.moneda === 'ARS')
     .reduce((a, p) => a + p.monto, 0)
   const totalUsd = vivos.filter((p) => p.moneda === 'USD')
@@ -94,7 +95,7 @@ export default function Pagar() {
           </div>
           {hecho.saldo ? (
             <div className="ob-pagar__hecho-saldo">
-              Queda <b className="ob-num">{plata(hecho.saldo.saldo)}</b> de este
+              Queda <b className="ob-num">{hecho.saldo.saldo == null ? 'Sin cotización' : `${hecho.saldo.moneda} ${num(hecho.saldo.saldo,2)}`}</b> de este
               presupuesto · llevás pagado el{' '}
               <b className="ob-num">{num(hecho.saldo.avance_pct, 1)} %</b>
             </div>
@@ -165,12 +166,12 @@ export default function Pagar() {
                   <td className="ob-num">
                     {p.moneda === 'USD' ? `u$d ${num(p.monto, 2)}` : plata(p.monto)}
                   </td>
-                  <td className="ob-num">{saldoDe(p) ? plata(saldoDe(p).saldo) : '—'}</td>
+                  <td className="ob-num">{saldoDe(p) ? importeSaldo(p) : '—'}</td>
                   <td style={{ width: '5rem' }}><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setAbiertoPago(abiertoPago === p.id ? null : p.id) }}>{abiertoPago === p.id ? 'Cerrar' : 'Detalle'}</button></td>
                 </tr>
                 {abiertoPago === p.id && <tr key={`${p.id}-detalle`}><td colSpan={9}><div className="ob-pago-detalle">
                   <b>{p.presupuesto || 'Pago suelto'}</b> · {p.rubro} / {p.subrubro || 'Sin tipo'}<br />
-                  {saldoDe(p) && <><br /><span>Saldo pendiente actual: <b>{plata(saldoDe(p).saldo)}</b> · pagado: {plata(saldoDe(p).pagado)} · proyectado: {plata(saldoDe(p).proyectado)}</span></>}
+                  {saldoDe(p) && <><br /><span>Saldo pendiente actual: <b>{importeSaldo(p)}</b> · pagado: {importeSaldo(p,'pagado')} · proyectado: {importeSaldo(p,'proyectado')}</span></>}
                   {p.cuota_id && <><br />Cuota asignada: {p.cuota_id}</>}
                   {p.notas && <><br />Notas: {p.notas}</>}
                   {p.anulado && <><br />Motivo de anulación: {p.anulado_motivo}</>}
@@ -257,6 +258,7 @@ function Formulario({ obra, destinos, alGuardar }) {
   }
 
   const elegido = destinos.presupuestos.find((p) => p.id === presupuestoId)
+  const plata = (valor) => valor == null ? 'Sin cotización' : `${elegido?.moneda || moneda} ${num(valor,2)}`
 
   const guardar = async (e) => {
     e.preventDefault()
@@ -324,7 +326,7 @@ function Formulario({ obra, destinos, alGuardar }) {
           <option value="">Pago suelto — sin presupuesto</option>
           {candidatos.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.nombre} · queda {plata(p.saldo)}
+              {p.nombre} · queda {p.saldo == null ? 'Sin cotización' : `${p.moneda} ${num(p.saldo,2)}`}
             </option>
           ))}
         </select>
@@ -334,7 +336,8 @@ function Formulario({ obra, destinos, alGuardar }) {
             Pagado: <b>{plata(elegido.pagado)}</b> · {num(elegido.avance_nominal_pct, 2)} % del precio original.<br />
             Saldo nominal: <b>{plata(elegido.saldo_nominal)}</b>.<br />
             Total estimado con ajuste IPC: {plata(elegido.proyectado)}.<br />
-            Saldo proyectado: <b>{plata(elegido.saldo)}</b>. Puede variar con los índices.
+              Saldo proyectado: <b>{plata(elegido.saldo)}</b>. Puede variar con los índices.
+              <br />Equivalente actual: {elegido.saldo_equivalente == null ? 'Sin cotización' : `${elegido.equivalente_moneda} ${num(elegido.saldo_equivalente,2)}`} · cotización del {fecha(elegido.cotizacion_actual_fecha)}.
           </span>
         )}
         {!elegido && rubroId && candidatos.length === 0 && (

@@ -124,41 +124,13 @@ def registrar(obra_id: str, p: PagoNuevo):
 
 def _saldo(presupuesto_id: str) -> dict | None:
     """Proyectado, pagado y saldo de un presupuesto, en dos consultas."""
-    cuotas = db.query(
-        """SELECT c.orden, c.tipo, c.descripcion, c.fecha_prevista, c.fecha_base_ipc, c.monto_nominal,
-                  c.indexa, c.estado, p.fecha_base
-           FROM dbo.v_cuota_programada c
-           JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
-           WHERE c.presupuesto_id = %s AND c.estado <> 'anulada'""",
-        (presupuesto_id,))
-    if not cuotas:
+    presupuesto = db.query('SELECT moneda,monto_base,obra_id FROM dbo.presupuesto WHERE id=%s', (presupuesto_id,))
+    if not presupuesto:
         return None
-
-    # v_pago_ars y no dbo.pago: un pago en dolares se convierte al oficial
-    # minorista del dia antes de restarse. Sumar el monto crudo le bajaria
-    # $2.500 al saldo por un pago de u$d 2.500.
-    pagado = db.query(
-        """SELECT ISNULL(SUM(monto_ars), 0) AS pagado,
-                  SUM(CASE WHEN monto_ars IS NULL THEN 1 ELSE 0 END) AS sin_convertir
-           FROM dbo.v_pago_ars
-           WHERE presupuesto_id = %s AND anulado = 0""", (presupuesto_id,))
-    ya = Decimal(str(pagado[0]["pagado"]))
-    sin_convertir = pagado[0]["sin_convertir"] or 0
-
-    proyectado = Decimal(0)
-    for c in _con_coeficientes(cuotas, cuotas[0]["fecha_base"], _ancla_ipc(), _niveles_ipc()):
-        if c["monto_proyectado"] is not None:
-            proyectado += c["monto_proyectado"]
-
-    return {
-        "proyectado": float(proyectado),
-        "pagado": float(ya),
-        "saldo": float(proyectado - ya),
-        "avance_pct": float(ya / proyectado * 100) if proyectado else None,
-        # Pagos en dolares sin cotizacion para su fecha: no se suman, y hay
-        # que poder decirlo en vez de mostrar un saldo que esta de menos.
-        "pagos_sin_convertir": sin_convertir,
-    }
+    from .presupuestos import ver
+    detalle = ver(str(presupuesto[0]['obra_id']), presupuesto_id)
+    total = detalle['total']
+    return {**total, 'avance_pct': total['avance_pago_pct']}
 
 
 @router.get("/pagos")
@@ -183,7 +155,16 @@ def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None
         sql += " AND g.presupuesto_id = %s"
         params += (presupuesto_id,)
     sql += " ORDER BY g.fecha DESC, g.creado_en DESC"
-    return db.query(sql, params)
+    resultado = db.query(sql, params)
+    from ..monedas import pagos_convertidos
+    monedas = {str(p['id']):p['moneda'] for p in db.query('SELECT id,moneda FROM dbo.presupuesto WHERE obra_id=%s', (obra_id,))}
+    tasas = {}
+    for pago in resultado:
+        moneda = monedas.get(str(pago['presupuesto_id']))
+        if moneda:
+            pagos_convertidos([pago], moneda, tasas)
+            pago['moneda_presupuesto'] = moneda
+    return resultado
 
 
 class PagoEdicion(BaseModel):
@@ -293,4 +274,12 @@ def destinos(obra_id: str):
             "avance_pct": float(ya / proyectado * 100) if proyectado else None,
         })
 
+    from ..monedas import pagos_convertidos, saldo
+    todos = db.query('SELECT presupuesto_id,fecha,monto,moneda,anulado FROM dbo.pago WHERE obra_id=%s', (obra_id,))
+    tasas = {}
+    for p in salida:
+        propios = [dict(g) for g in todos if str(g['presupuesto_id']) == p['id']]
+        pagos_convertidos(propios, p['moneda'], tasas)
+        p.update(saldo(propios, p['moneda'], p['nominal'], p['proyectado']))
+        p['avance_nominal_pct'] = None if p['pagos_sin_convertir'] or not p['nominal'] else p['pagado']/p['nominal']*100
     return {"rubros": rubros, "subrubros": subrubros, "presupuestos": salida}

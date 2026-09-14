@@ -51,7 +51,7 @@ export default function Presupuestos() {
   if (!datos) return <p className="ob-cargando">Cargando…</p>
 
   const grupos = datos.grupos
-  const totalElegido = grupos.reduce((a, g) => a + (g.elegido_monto ?? 0), 0)
+  const totalElegido = ['ARS','USD'].map(m=>`${m} ${num(grupos.filter(g=>g.elegido_moneda===m).reduce((a,g)=>a+(g.elegido_monto || 0),0),2)}`).join(' · ')
   const sinElegir = grupos.filter((g) => !g.elegido_id).length
 
   return (
@@ -60,7 +60,7 @@ export default function Presupuestos() {
         <span className="ob-label">Presupuestos</span>
         <span className="ob-toolbar__meta">
           {grupos.length === 0 ? 'Ninguno cargado todavía'
-            : `${grupos.length} rubro/tipo · elegido ${plata(totalElegido)} nominal`}
+            : `${grupos.length} rubro/tipo · elegido ${totalElegido} nominal`}
           <button className="ob-btn ob-btn--primario" onClick={() => setAlta(!alta)}
             style={{ marginLeft: 'var(--ob-gap-3)' }}>
             {alta ? 'Cancelar' : 'Cargar un presupuesto'}
@@ -117,18 +117,18 @@ export default function Presupuestos() {
                 </span>
                 <span className="ob-comp__dato">
                   <b className="ob-label">Más barato</b>
-                  <b className="ob-num">{g.mas_barato == null ? '—' : plata(g.mas_barato)}</b>
+                  <b className="ob-num">{g.mas_barato == null ? '—' : `${g.moneda} ${num(g.mas_barato,2)}`}</b>
                 </span>
                 <span className="ob-comp__dato">
                   <b className="ob-label">Dispersión</b>
                   <b className={`ob-num${g.dispersion ? ' ob-delta--sube' : ''}`}>
-                    {g.dispersion == null ? '—' : plata(g.dispersion)}
+                    {g.dispersion == null ? '—' : `${g.moneda} ${num(g.dispersion,2)}`}
                   </b>
                 </span>
                 <span className="ob-comp__dato">
                   <b className="ob-label">Elegido</b>
                   <b className={`ob-num${g.elegido_monto == null ? ' ob-table__sec' : ''}`}>
-                    {g.elegido_monto == null ? 'ninguno' : plata(g.elegido_monto)}
+                    {g.elegido_monto == null ? 'ninguno' : `${g.elegido_moneda} ${num(g.elegido_monto,2)}`}
                   </b>
                 </span>
               </span>
@@ -162,7 +162,7 @@ export default function Presupuestos() {
                         {c.origen === 'items' ? 'por artículos' : 'monto único'}
                       </td>
                       <td className="ob-num">
-                        {plata(c.monto_base)}
+                        {c.moneda} {num(c.monto_base,2)}
                         {g.mas_barato != null && c.estado === 'confirmado'
                           && c.monto_base > g.mas_barato && (
                           <span className="ob-comp__delta ob-delta--sube">

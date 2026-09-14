@@ -55,6 +55,7 @@ export default function Presupuesto() {
   if (!d) return <p className="ob-cargando">Cargando…</p>
 
   const p = d.presupuesto
+  const plata = (valor) => valor == null ? 'Sin cotización' : `${p.moneda} ${num(valor, 2)}`
   const t = d.total
   const borrador = p.estado === 'borrador'
 
@@ -125,6 +126,8 @@ export default function Presupuesto() {
             pie="Contra el proyectado, no contra el nominal: lo que falta de verdad incluye el ajuste." />
         </div>
       )}
+
+      {!borrador && <p style={{padding:'0 1rem'}}>Saldo en {p.moneda}: {plata(t.saldo)} · Equivalente actual: {t.saldo_equivalente == null ? 'Sin cotización disponible' : `${t.equivalente_moneda} ${num(t.saldo_equivalente,2)}`} · Cotización del {fecha(t.cotizacion_actual_fecha)}. Los pagos se convierten a la fecha en que se realizaron.</p>}
 
       {borrador && p.origen === 'items' && <form className="ob-card" style={{ padding: '1rem' }} onSubmit={async (e) => {
         e.preventDefault(); setGuardandoItems(true)
@@ -269,9 +272,9 @@ export default function Presupuesto() {
                     <td className="ob-table__sec">
                       {g.anulado ? `anulado: ${g.anulado_motivo}` : (g.notas || '—')}
                     </td>
-                    <td className="ob-num">{t.nominal ? `${num(d.pagos.slice(0, d.pagos.indexOf(g) + 1).filter((x) => !x.anulado).reduce((a, x) => a + Number(x.monto), 0) / t.nominal * 100, 1)} %` : '—'}</td>
+                    <td className="ob-num">{t.nominal && !t.pagos_sin_convertir ? `${num(d.pagos.filter((x) => !x.anulado && x.fecha <= g.fecha).reduce((a, x) => a + Number(x.monto_presupuesto || 0), 0) / t.nominal * 100, 1)} %` : '—'}</td>
                     <td className="ob-num">
-                      {g.moneda === 'USD' ? `u$d ${num(g.monto, 2)}` : plata(g.monto)}
+                      {g.moneda} {num(g.monto, 2)}
                     </td>
                     {/* Lo que se resta del saldo es esto, no el monto de
                         arriba. Con la cotizacion a la vista el numero se
@@ -279,7 +282,7 @@ export default function Presupuesto() {
                     <td className={`ob-num${g.monto_ars == null ? ' ob-table__sec' : ''}`}
                       title={g.cotizacion_usada
                         ? `Oficial minorista ${num(g.cotizacion_usada, 2)} del día del pago` : undefined}>
-                      {g.monto_ars == null ? 'sin cotización' : plata(g.monto_ars)}
+                      {g.monto_ars == null ? 'sin cotización' : `ARS ${num(g.monto_ars,2)}`}
                     </td>
                   </tr>
                 ))}

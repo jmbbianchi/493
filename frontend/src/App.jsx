@@ -14,6 +14,7 @@ import Lista from './pantallas/Lista'
 import Materiales from './pantallas/Materiales'
 import Documentacion from './pantallas/Documentacion'
 import Financiacion from './pantallas/Financiacion'
+import Cotizaciones from './pantallas/Cotizaciones'
 import Rendimientos from './pantallas/Rendimientos'
 import ObraNueva from './pantallas/ObraNueva'
 import Aviso from './componentes/Aviso'
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="calculadora" element={<ConObra Pantalla={Materiales} />} />
         <Route path="documentacion" element={<ConObra Pantalla={Documentacion} />} />
         <Route path="financiacion" element={<ConObra Pantalla={Financiacion} />} />
+        <Route path="cotizaciones" element={<Cotizaciones />} />
         {/* Rutas antiguas conservadas temporalmente para no romper enlaces
             guardados, pero ya no forman parte de la navegación principal. */}
         <Route path="pagar" element={<Pagar />} />
