@@ -114,7 +114,7 @@ export default function Presupuestos() {
         const clave = `${g.rubro_id}-${g.subrubro_id}`
         const abierta = abierto[clave]
         return (
-          <div className="ob-comp" key={clave}>
+          <div className="ob-comp ob-comp--finanzas" key={clave}>
             <button className="ob-comp__cabeza"
               /* Actualizador funcional y no {...abierto}: dos grupos
                  abiertos en el mismo tick leen el mismo estado viejo y el
@@ -158,6 +158,7 @@ export default function Presupuestos() {
 
             {abierta && (
               <table className="ob-table ob-comp__tabla">
+                <colgroup><col className="ob-col-estado" /><col className="ob-col-nombre" /><col className="ob-col-fecha" /><col className="ob-col-tipo" /><col className="ob-col-dinero" /><col className="ob-col-dinero" /><col className="ob-col-dinero" /><col className="ob-col-estado" /><col className="ob-col-accion" /></colgroup>
                 <thead>
                   <tr>
                     <th></th>

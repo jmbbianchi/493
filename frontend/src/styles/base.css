@@ -49,6 +49,7 @@ body {
 /* ---------- barra superior ---------- */
 .ob-topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--ob-gap-4);
   padding: var(--ob-gap-3) var(--ob-gap-4);
@@ -79,9 +80,10 @@ body {
 }
 
 /* ---------- barra de filtros ---------- */
-.ob-toolbar { display: flex; align-items: center; gap: var(--ob-gap-1);
-              padding: var(--ob-gap-3) var(--ob-gap-4); border-bottom: var(--ob-border); }
-.ob-toolbar__meta { margin-left: auto; font-size: var(--ob-fs-xs); color: var(--ob-ink-3); }
+.ob-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ob-gap-2);
+              min-height: 3.25rem; padding: var(--ob-gap-3) var(--ob-gap-4); border-bottom: var(--ob-border); }
+.ob-toolbar__meta { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap;
+                    gap: var(--ob-gap-2); font-size: var(--ob-fs-xs); color: var(--ob-ink-3); }
 
 .ob-pill {
   font-size: var(--ob-fs-xs);
@@ -108,6 +110,12 @@ body {
   overflow: auto;
 }
 .ob-table { border-collapse: collapse; width: 100%; font-size: var(--ob-fs-sm); }
+.ob-table col.ob-col-estado { width: 3rem; }
+.ob-table col.ob-col-fecha { width: 7.5rem; }
+.ob-table col.ob-col-nombre { width: 14rem; }
+.ob-table col.ob-col-tipo { width: 10rem; }
+.ob-table col.ob-col-dinero { width: 10.5rem; }
+.ob-table col.ob-col-accion { width: 7rem; }
 
 .ob-table th {
   font-size: var(--ob-label-size);
@@ -124,12 +132,17 @@ body {
 .ob-table td {
   padding: var(--ob-cell-py) var(--ob-cell-px);
   border-bottom: 1px solid var(--ob-line);
-  vertical-align: baseline;
+  vertical-align: middle;
   height: var(--ob-row-h);
 }
 /* Columnas regladas: lo que hereda de la planilla de computo. */
 .ob-table th, .ob-table td { border-right: 1px solid var(--ob-line); }
 .ob-table th:last-child, .ob-table td:last-child { border-right: none; }
+.ob-table th { white-space: nowrap; }
+.ob-table th.ob-num, .ob-table td.ob-num { text-align: right; white-space: nowrap; }
+.ob-table td:last-child { text-align: right; }
+.ob-table td { overflow-wrap: anywhere; }
+.ob-table td.ob-num { overflow-wrap: normal; }
 
 .ob-table tbody tr:hover td { background: var(--ob-surface-2); }
 
@@ -191,9 +204,19 @@ body {
   border: 1px solid var(--ob-line-strong);
   border-radius: var(--ob-radius-sm);
   background: var(--ob-surface); color: var(--ob-ink);
+  max-width: 100%;
 }
 .ob-input::placeholder { color: var(--ob-ink-3); }
 .ob-input:focus-visible { border-color: var(--ob-accent); }
+.ob-card > label,
+.ob-card > form > label {
+  display: grid;
+  align-content: start;
+  gap: var(--ob-gap-1);
+  min-width: 0;
+}
+.ob-card > label > .ob-input,
+.ob-card > form > label > .ob-input { width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -351,6 +374,9 @@ body {
     background: none; border-bottom-color: var(--ob-accent);
   }
   .ob-topbar__ruta { display: none; }
+  .ob-toolbar__meta { margin-left: 0; width: 100%; }
+  .ob-toolbar__meta .ob-btn { margin-left: auto !important; }
+  .ob-tablewrap { margin: var(--ob-gap-2); }
 }
 
 /* ---------- alta de presupuesto ----------
@@ -497,6 +523,17 @@ body {
 .ob-comp__tabla { border-top: 1px solid var(--ob-line-strong); }
 .ob-comp__elegida td { background: var(--ob-accent-soft); }
 .ob-comp__elegida:hover td { background: var(--ob-accent-soft); }
+.ob-comp--finanzas { overflow-x: auto; }
+.ob-comp--finanzas .ob-comp__cabeza {
+  display: grid;
+  grid-template-columns: 1rem minmax(14rem, 1fr) repeat(6, minmax(7.25rem, 9rem));
+  column-gap: var(--ob-gap-3);
+  min-width: 72rem;
+}
+.ob-comp--finanzas .ob-comp__cifras { display: contents; }
+.ob-comp--finanzas .ob-comp__dato { min-width: 0; width: 100%; justify-items: end; text-align: right; }
+.ob-comp--finanzas .ob-comp__dato .ob-num { white-space: nowrap; }
+.ob-comp--finanzas .ob-comp__tabla { min-width: 72rem; table-layout: fixed; }
 /* Cuanto mas cara que la mas barata del grupo. Es la comparacion que se
    hace mirando tres presupuestos arriba de una mesa. */
 .ob-comp__delta { margin-left: .4rem; font-size: var(--ob-fs-2xs); }
@@ -505,6 +542,10 @@ body {
   .ob-comp__cabeza { flex-wrap: wrap; }
   .ob-comp__cifras { margin-left: 0; width: 100%; gap: var(--ob-gap-4);
                      justify-content: space-between; }
+  .ob-comp--finanzas .ob-comp__cabeza {
+    grid-template-columns: 1rem minmax(12rem, 1fr) repeat(6, minmax(7.25rem, 8rem));
+  }
+  .ob-pagar__monto-fila { display: grid; grid-template-columns: minmax(0, 1fr) 8rem; }
 }
 
 /* ---------- modal ----------

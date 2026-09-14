@@ -1,5 +1,5 @@
 import SelectorCategoria from '../componentes/SelectorCategoria'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
@@ -147,6 +147,7 @@ export default function Pagar() {
       ) : (
         <div className="ob-tablewrap">
           <table className="ob-table">
+            <colgroup><col className="ob-col-fecha" /><col className="ob-col-nombre" /><col className="ob-col-tipo" /><col className="ob-col-nombre" /><col className="ob-col-tipo" /><col className="ob-col-dinero" /><col className="ob-col-dinero" /><col className="ob-col-accion" /></colgroup>
             <thead>
               <tr>
                 <th>Fecha</th>
@@ -160,7 +161,7 @@ export default function Pagar() {
               </tr>
             </thead>
             <tbody>
-              {pagos.map((p) => <>
+              {pagos.map((p) => <Fragment key={p.id}>
                 <tr key={p.id} className={p.anulado ? 'ob-pago--anulado' : undefined} onClick={() => setAbiertoPago(abiertoPago === p.id ? null : p.id)}>
                   <td>{fecha(p.fecha)}</td>
                   <td>{p.rubro}</td>
@@ -177,7 +178,7 @@ export default function Pagar() {
                   <td className="ob-num">{saldoDe(p) ? importeSaldo(p) : '—'}</td>
                   <td style={{ width: '5rem' }}><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setAbiertoPago(abiertoPago === p.id ? null : p.id) }}>{abiertoPago === p.id ? 'Cerrar' : 'Detalle'}</button></td>
                 </tr>
-                {abiertoPago === p.id && <tr key={`${p.id}-detalle`}><td colSpan={9}><div className="ob-pago-detalle">
+                {abiertoPago === p.id && <tr><td colSpan={8}><div className="ob-pago-detalle">
                   <b>{p.presupuesto || 'Pago suelto'}</b> · {p.rubro} / {p.subrubro || 'Sin tipo'}<br />
                   {saldoDe(p) && <><br /><span>Saldo pendiente actual: <b>{importeSaldo(p)}</b> · pagado: {importeSaldo(p,'pagado')} · proyectado: {importeSaldo(p,'proyectado')}</span></>}
                   {p.cuota_id && <><br />Cuota asignada: {p.cuota_id}</>}
@@ -186,7 +187,7 @@ export default function Pagar() {
                   <div><button className="ob-btn" onClick={() => eliminar(p)}>Eliminar definitivamente</button></div>
                   {!p.anulado && <div className="ob-pago-detalle__acciones"><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setEditando(p) }}>Editar</button><button className="ob-btn" onClick={(e) => { e.stopPropagation(); anular(p) }}>Anular</button><Adjuntos obra={obra} colgar={{ pago_id: p.id }} tipo="factura" titulo="Comprobantes" provistos={documentos[p.id] ?? []} alCambiar={cargar} /></div>}
                 </div></td></tr>}
-              </>
+              </Fragment>
               )}
             </tbody>
           </table>
