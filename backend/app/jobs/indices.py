@@ -50,6 +50,35 @@ BCRA = "https://api.bcra.gob.ar/estadisticas/v4.0/monetarias"
 PAGINA = 3000                       # maximo que acepta el BCRA
 PISO = os.environ.get("INDICES_PISO", "2016-01-01")
 REFRESCO_DIAS = 30
+OFICIAL_URL = 'https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial'
+
+
+def _filas_oficial(detalle, hoy):
+    filas = []
+    for f in detalle:
+        if f.get('casa') != 'oficial' or f.get('moneda','USD') != 'USD':
+            continue
+        fecha = dt.date.fromisoformat(f['fecha'][:10])
+        if fecha > hoy:
+            continue
+        for campo,codigo in [('compra','USD_OFICIAL_COMPRA'),('venta','USD_OFICIAL_VENTA')]:
+            valor = f.get(campo)
+            if valor is not None and Decimal(str(valor)).is_finite() and Decimal(str(valor)) > 0:
+                filas.append((codigo,fecha,Decimal(str(valor))))
+    return filas
+
+
+def sincronizar_oficial(http, hoy):
+    respuesta = http.get(OFICIAL_URL)
+    respuesta.raise_for_status()
+    filas = _filas_oficial(respuesta.json(),hoy)
+    if not filas:
+        raise ValueError('La fuente no devolvió cotizaciones oficiales válidas.')
+    for codigo,nombre in [('USD_OFICIAL_COMPRA','Dólar oficial compra'),('USD_OFICIAL_VENTA','Dólar oficial venta')]:
+        db.execute('''IF NOT EXISTS(SELECT 1 FROM dbo.indice WHERE codigo=%s)
+            INSERT dbo.indice(codigo,nombre,fuente,periodicidad) VALUES(%s,%s,'ARGENTINADATOS','diaria')''',
+            (codigo,codigo,nombre))
+    return _cargar(filas)
 
 VARIABLES = {
     4:  "USD_MINORISTA",
@@ -165,6 +194,10 @@ def main() -> int:
     total = 0
 
     with httpx.Client(timeout=60, verify=True) as http:
+        try:
+            total += sincronizar_oficial(http,hoy)
+        except Exception as e:
+            print(f'[WARN] dólar oficial compra/venta: {e}',file=sys.stderr)
         for var_id, codigo in VARIABLES.items():
             historia = _necesita_historia(codigo)
             desde = PISO if historia else refresco
