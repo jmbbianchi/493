@@ -12,6 +12,9 @@ import {tiposDocumento} from '../documentos'
 import '../styles/datos-obra.css'
 import FiltrosPagos from '../componentes/FiltrosPagos'
 import {filtrosVacios,filtrarPagos} from '../filtrosPagos'
+import {importePago,convertirRegistro,resumenRegistro} from '../monedaRegistro'
+import {tasaEn,sumar} from '../tesoreria'
+import '../styles/calendario-pagos.css'
 
 /**
  * Registrar Pago: lo que se pagó, y el botón para cargar uno nuevo.
@@ -38,19 +41,22 @@ export default function Pagar() {
   const [hecho, setHecho] = useState(null)
   const [saldos,setSaldos]=useState({})
   const [filtros,setFiltros]=useState(filtrosVacios)
+  const [monedaVista,setMonedaVista]=useState('ARS')
+  const [tasas,setTasas]=useState([])
   useEffect(()=>{setFiltros(filtrosVacios())},[obra.id])
 
   const cargar = async () => {
     try {
-      const [d, g, docs] = await Promise.all([
+      const [d, g, docs, cotizaciones] = await Promise.all([
         api.get(`/api/obras/${obra.id}/pagar-destinos`),
         api.get(`/api/obras/${obra.id}/pagos`),
         api.get(`/api/obras/${obra.id}/documentos`),
+        api.get('/api/indices/dolar-calendario'),
       ])
       const resumenes=Object.fromEntries(d.presupuestos.map(p=>[p.id,p]))
       const faltantes=[...new Set(g.map(p=>p.presupuesto_id).filter(id=>id && !resumenes[id]))]
       await Promise.all(faltantes.map(async id=>{const detalle=await api.get(`/api/obras/${obra.id}/presupuestos/${id}`);resumenes[id]={...detalle.total,moneda:detalle.presupuesto.moneda}}))
-      setDestinos(d); setPagos(g);setSaldos(resumenes)
+      setDestinos(d); setPagos(g);setSaldos(resumenes);setTasas(cotizaciones)
       const porPago = {}
       for (const x of docs) if (x.pago_id) (porPago[x.pago_id] ??= []).push(x)
       setDocumentos(porPago)
@@ -81,11 +87,12 @@ export default function Pagar() {
   const visibles = filtrarPagos(pagos,documentos,filtros)
   const vivos = visibles.filter((p) => !p.anulado)
   const saldoDe = (p) => p.presupuesto_id ? saldos[p.presupuesto_id] : null
-  const importeSaldo = (p, campo='saldo') => saldoDe(p)?.[campo] == null ? 'Sin cotización' : `${saldoDe(p).moneda} ${num(saldoDe(p)[campo],2)}`
-  const totalArs = vivos.filter((p) => p.moneda === 'ARS')
-    .reduce((a, p) => a + p.monto, 0)
-  const totalUsd = vivos.filter((p) => p.moneda === 'USD')
-    .reduce((a, p) => a + p.monto, 0)
+  const resumen=resumenRegistro(visibles,saldos,monedaVista,tasas,hoyArgentina())
+  const dineroVista=v=>v==null?'Sin cotización':`${monedaVista} ${num(v/100,2)}`
+  const importeSaldo = (p, campo='saldo') => dineroVista(campo==='pagado'
+    ? sumar(pagos.filter(g=>g.presupuesto_id===p.presupuesto_id && !g.anulado && g.fecha.slice(0,10)<=hoyArgentina()).map(g=>importePago(g,monedaVista,tasas)))
+    : convertirRegistro(saldoDe(p)?.[campo],saldoDe(p)?.moneda,monedaVista,resumen.actual))
+  const detalleCotizacion=p=>{const t=tasaEn(tasas,p.fecha.slice(0,10));return `Original: ${p.moneda} ${num(p.monto,2)}${p.moneda===monedaVista?'':t?` · 1 USD = ARS ${num(t.valor,2)} del ${fecha(t.fecha)}`:' · Sin cotización histórica'}`}
   const detalle=pagos.find(p=>p.id===abiertoPago)
 
   return (
@@ -95,10 +102,10 @@ export default function Pagar() {
         <span className="ob-toolbar__meta">
           {vivos.length === 0 ? 'Sin pagos vigentes en esta selección' : (
             <>
-              {vivos.length} pago(s) visibles · {plata(totalArs)}
-              {totalUsd > 0 && ` · u$d ${num(totalUsd, 2)}`}
+              {vivos.length} pago(s) vigentes visibles
             </>
           )}
+          <span className="cp-switch" role="group" aria-label="Moneda del registro" style={{marginLeft:12}}>{['ARS','USD'].map(m=><button key={m} aria-pressed={monedaVista===m} onClick={()=>setMonedaVista(m)}>{m==='ARS'?'Pesos':'Dólares'}</button>)}</span>
           <button className="ob-btn ob-btn--primario" onClick={() => setAbierto(true)}
             style={{ marginLeft: 'var(--ob-gap-3)' }}>
             Registrar un pago
@@ -107,6 +114,11 @@ export default function Pagar() {
       </div>
 
       <FiltrosPagos pagos={pagos} documentos={documentos} presupuestos={saldos} valor={filtros} onChange={setFiltros} cantidad={visibles.length}/>
+      <div className="rp-totales" aria-label="Totales filtrados">
+        <span title="Suma de los pagos visibles no anulados, convertidos con la cotización de cada fecha de pago">Total pagos filtrados <strong>{dineroVista(resumen.total)}</strong></span>
+        <span title="Saldo actual de los presupuestos asociados a los pagos filtrados, contado una sola vez por presupuesto">Saldo de presupuestos asociados <strong>{dineroVista(resumen.pendiente)}</strong> <small>({resumen.presupuestos})</small></span>
+        <small>Pagos al dólar histórico · Saldos al dólar actual{resumen.actual?` del ${fecha(resumen.actual.fecha)}`:''} · Anulados excluidos</small>
+      </div>
 
       {hecho && (
         <div className="ob-pagar__hecho" style={{ margin: 'var(--ob-gap-4)' }}>
@@ -135,14 +147,14 @@ export default function Pagar() {
       {detalle && <Modal titulo="Detalle del pago" alCerrar={()=>{setAbiertoPago(null);setEditando(null)}}>
         <dl className="rp-detalle">
           {[
-            ['Fecha de Pago',fecha(detalle.fecha)],['Importe',`${detalle.moneda} ${num(detalle.monto,2)}`],
+            ['Fecha de Pago',fecha(detalle.fecha)],['Importe',dineroVista(importePago(detalle,monedaVista,tasas))],
+            ['Importe original y cotización',detalleCotizacion(detalle)],
             ['Rubro',detalle.rubro],['Tipo',detalle.subrubro || 'Sin tipo'],['Medio',detalle.medio],
             ['Presupuesto asociado',detalle.presupuesto || 'Pago sin presupuesto previo'],
             ['Saldo pendiente del presupuesto',detalle.presupuesto_id ? importeSaldo(detalle) : 'No corresponde'],
             ['Pagado del presupuesto',detalle.presupuesto_id ? importeSaldo(detalle,'pagado') : 'No corresponde'],
             ['Total proyectado',detalle.presupuesto_id ? importeSaldo(detalle,'proyectado') : 'No corresponde'],
-            ['Equivalente del pago en ARS',detalle.monto_ars==null ? 'Sin cotización' : `ARS ${num(detalle.monto_ars,2)}`],
-            ['Aplicado al presupuesto',detalle.presupuesto_id && detalle.monto_presupuesto!=null ? `${saldoDe(detalle)?.moneda || ''} ${num(detalle.monto_presupuesto,2)}` : 'No corresponde'],
+            ['Aplicado al presupuesto (moneda original del acuerdo)',detalle.presupuesto_id && detalle.monto_presupuesto!=null ? `${saldoDe(detalle)?.moneda || ''} ${num(detalle.monto_presupuesto,2)}` : 'No corresponde'],
             ['Cuota',detalle.cuota_descripcion || (detalle.cuota_id ? 'Cuota asignada' : 'Sin cuota específica')],
             ['Notas',detalle.notas || 'Sin notas'],['Estado',detalle.anulado ? `Anulado: ${detalle.anulado_motivo || ''}` : 'Registrado'],
           ].map(([titulo,valor])=><div key={titulo}><dt>{titulo}</dt><dd>{valor}</dd></div>)}
@@ -205,8 +217,8 @@ export default function Pagar() {
                       style={{ marginLeft: '.4rem' }}>anulado</span>}
                   </td>
                   <td className="ob-table__sec">{p.medio}</td>
-                  <td className="ob-num">
-                    {p.moneda === 'USD' ? <><span className="ob-chip ob-chip--mudo">U$D</span> {num(p.monto,2)}</> : plata(p.monto)}
+                  <td className="ob-num" title={detalleCotizacion(p)}>
+                    {dineroVista(importePago(p,monedaVista,tasas))}
                   </td>
                   <td className="ob-num">{saldoDe(p) ? importeSaldo(p) : '—'}</td>
                   <td>{documentos[p.id]?.length ? `Sí · ${documentos[p.id].length}` : 'Sin adjuntos'}</td>

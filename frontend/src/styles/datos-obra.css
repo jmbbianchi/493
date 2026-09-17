@@ -4,3 +4,4 @@
 .rp-detalle{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.rp-detalle dt{font-size:.75rem;color:var(--ob-ink-2)}.rp-detalle dd{margin:.25rem 0;overflow-wrap:anywhere}.rp-acciones{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
 @media(max-width:800px){.do-campos{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.do-campos,.rp-detalle{grid-template-columns:1fr}}
+.rp-totales{display:flex;align-items:center;gap:1rem;margin:10px 16px 0;font-size:.8rem;flex-wrap:wrap}.rp-totales strong{margin-left:.5rem;font-variant-numeric:tabular-nums}.rp-totales small{color:var(--ob-ink-2)}
