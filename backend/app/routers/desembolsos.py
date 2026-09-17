@@ -26,6 +26,8 @@ class Acuerdo(BaseModel):
     nombre: str = Field(min_length=1, max_length=200)
     monto_base: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
     elegido: bool
+    rubro_id: int | None = Field(default=None, gt=0)
+    subrubro_id: int | None = Field(default=None, gt=0)
     base_ipc: Literal["cotizacion", "primera_cuota"] = "primera_cuota"
     tarea_id: UUID | None = None
     nueva_tarea: str | None = Field(default=None, max_length=200)
@@ -54,8 +56,10 @@ def leer(cur, obra_id, presupuesto_id):
 def obtener(obra_id: str, presupuesto_id: str):
     with db.cursor() as cur:
         p, cuotas, pagos, config, huella = leer(cur,obra_id,presupuesto_id)
+    pagadas = {str(g['cuota_id']) for g in pagos if not g['anulado'] and g['cuota_id']}
     return dict(nombre=p["nombre"],monto_base=p["monto_base"],elegido=bool(p["elegido"]),
-                estado=p["estado"],origen=p["origen"],huella=huella,cuotas=[c for c in cuotas if c["estado"]!="anulada"], **config)
+                rubro_id=p['rubro_id'],subrubro_id=p['subrubro_id'],moneda=p['moneda'],
+                estado=p["estado"],origen=p["origen"],huella=huella,cuotas=[dict(c,con_pagos=str(c['id']) in pagadas) for c in cuotas if c["estado"]!="anulada"], **config)
 
 def validar(datos, anteriores, pagos):
     if sum(c.monto_nominal for c in datos.cuotas) != datos.monto_base:
@@ -84,26 +88,34 @@ def guardar(obra_id: str, presupuesto_id: str, datos: Acuerdo):
         if p["estado"]=="anulado":
             raise HTTPException(409,"El presupuesto está anulado.")
         validar(datos,anteriores,pagos)
-        if p["origen"]=="items" and datos.monto_base != Decimal(str(p["monto_base"])):
-            raise HTTPException(422,"El monto de artículos se modifica desde sus renglones.")
+        # Los artículos conservan la cotización original; monto_base registra
+        # el total finalmente negociado, respaldado por el plan de desembolsos.
+        rubro_id = datos.rubro_id if datos.rubro_id is not None else p['rubro_id']
+        subrubro_id = datos.subrubro_id if datos.subrubro_id is not None else p['subrubro_id']
+        cur.execute('SELECT id FROM dbo.rubro WHERE id=%s', (rubro_id,))
+        if not cur.fetchone():
+            raise HTTPException(422, 'No existe el rubro seleccionado.')
+        cur.execute('SELECT id FROM dbo.subrubro WHERE id=%s', (subrubro_id,))
+        if not cur.fetchone():
+            raise HTTPException(422, 'No existe el tipo seleccionado.')
         tarea_id = str(datos.tarea_id) if datos.tarea_id else None
         if tarea_id:
             cur.execute("SELECT id FROM dbo.proyecto_tarea WHERE id=%s AND obra_id=%s AND tipo='tarea'", (tarea_id,obra_id))
             if not cur.fetchone():
                 raise HTTPException(422,"La tarea debe pertenecer a esta obra.")
         if datos.nueva_tarea:
-            cur.execute("SELECT id FROM dbo.proyecto_rubro WHERE obra_id=%s AND rubro_origen_id=%s",(obra_id,p["rubro_id"]))
+            cur.execute("SELECT id FROM dbo.proyecto_rubro WHERE obra_id=%s AND rubro_origen_id=%s",(obra_id,rubro_id))
             rubro = cur.fetchone()
             if rubro:
                 rid = str(rubro["id"])
             else:
-                cur.execute("SELECT nombre FROM dbo.rubro WHERE id=%s",(p["rubro_id"],))
+                cur.execute("SELECT nombre FROM dbo.rubro WHERE id=%s",(rubro_id,))
                 nombre = cur.fetchone()["nombre"]
                 cur.execute("SELECT id FROM dbo.proyecto_rubro WHERE obra_id=%s AND nombre=%s",(obra_id,nombre))
                 rubro = cur.fetchone()
                 rid = str(rubro["id"]) if rubro else str(uuid4())
                 if not rubro:
-                    cur.execute("INSERT dbo.proyecto_rubro (id,obra_id,nombre,rubro_origen_id) VALUES (%s,%s,%s,%s)",(rid,obra_id,nombre,p["rubro_id"]))
+                    cur.execute("INSERT dbo.proyecto_rubro (id,obra_id,nombre,rubro_origen_id) VALUES (%s,%s,%s,%s)",(rid,obra_id,nombre,rubro_id))
             tarea_id = str(uuid4())
             cur.execute("INSERT dbo.proyecto_tarea (id,obra_id,rubro_id,nombre,tipo,fecha_inicio,fecha_fin) VALUES (%s,%s,%s,%s,'tarea',%s,%s)",(tarea_id,obra_id,rid,datos.nueva_tarea,datos.inicio_tarea,datos.fin_tarea))
         if tarea_id:
@@ -111,8 +123,10 @@ def guardar(obra_id: str, presupuesto_id: str, datos: Acuerdo):
             if not cur.fetchone():
                 cur.execute("INSERT dbo.proyecto_presupuesto_tarea VALUES (%s,%s,%s)",(obra_id,presupuesto_id,tarea_id))
         if datos.elegido:
-            cur.execute("UPDATE dbo.presupuesto SET elegido=0 WHERE obra_id=%s AND rubro_id=%s AND subrubro_id=%s AND id<>%s",(obra_id,p["rubro_id"],p["subrubro_id"],presupuesto_id))
-        cur.execute("UPDATE dbo.presupuesto SET nombre=%s,monto_base=%s,elegido=%s,estado='confirmado' WHERE id=%s",(datos.nombre,datos.monto_base,datos.elegido,presupuesto_id))
+            cur.execute("UPDATE dbo.presupuesto SET elegido=0 WHERE obra_id=%s AND rubro_id=%s AND subrubro_id=%s AND id<>%s",(obra_id,rubro_id,subrubro_id,presupuesto_id))
+        cur.execute("UPDATE dbo.presupuesto SET nombre=%s,monto_base=%s,elegido=%s,rubro_id=%s,subrubro_id=%s,estado='confirmado' WHERE id=%s",(datos.nombre,datos.monto_base,datos.elegido,rubro_id,subrubro_id,presupuesto_id))
+        if (rubro_id,subrubro_id)!=(p['rubro_id'],p['subrubro_id']):
+            cur.execute('UPDATE dbo.pago SET rubro_id=%s,subrubro_id=%s WHERE obra_id=%s AND presupuesto_id=%s', (rubro_id,subrubro_id,obra_id,presupuesto_id))
         max_orden = max([c["orden"] for c in anteriores] or [0])
         mantener = {str(c.id) for c in datos.cuotas if c.id}
         for c in anteriores:

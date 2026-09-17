@@ -5,6 +5,8 @@ import Aviso from '../componentes/Aviso'
 import Adjuntos from '../componentes/Adjuntos'
 import ItemsPresupuesto from '../componentes/ItemsPresupuesto'
 import Modal from '../componentes/Modal'
+import SelectorCategoria from '../componentes/SelectorCategoria'
+import { totalAcuerdo, repartirAcuerdo } from '../acuerdos'
 import { plata, num, fecha } from '../formato'
 
 /**
@@ -70,14 +72,15 @@ export default function Presupuesto() {
     try {
       const acuerdo = await api.get(`/api/obras/${obra.id}/presupuestos/${presupuestoId}/acuerdo`)
       const proyecto = await api.get(`/api/obras/${obra.id}/proyecto`).catch(() => ({ tareas: [] }))
-      setEditando({ ...acuerdo, proyecto, cuotas: acuerdo.cuotas.map((c) => ({ ...c, monto_nominal: String(c.monto_nominal), fecha_prevista: c.fecha_prevista ? String(c.fecha_prevista).slice(0, 10) : '' })) })
+      const [rubros,subrubros] = await Promise.all([api.get(`/api/obras/${obra.id}/rubros`),api.get(`/api/obras/${obra.id}/subrubros`)])
+      setEditando({ ...acuerdo, proyecto, rubros, subrubros, cuotas: acuerdo.cuotas.map((c) => ({ ...c, monto_nominal: String(c.monto_nominal), fecha_prevista: c.fecha_prevista ? String(c.fecha_prevista).slice(0, 10) : '' })) })
     } catch (e) { setError(e) }
   }
 
   return (
     <>
       <div className="ob-toolbar">
-        <button className="ob-btn" onClick={() => navegar(`/obra/${obra.id}/rubros/${rubroId}`)}>
+        <button className="ob-btn" onClick={() => navegar(`/obra/${obra.id}/rubros/${p.rubro_id}`)}>
           ← Volver al rubro
         </button>
         <span className="ob-label" style={{ marginLeft: 'var(--ob-gap-3)' }}>{p.nombre}</span>
@@ -142,7 +145,7 @@ export default function Presupuesto() {
           <div className="ob-toolbar" style={{ borderTop: 'var(--ob-border)' }}>
             <span className="ob-label">Artículos cotizados</span>
             <span className="ob-toolbar__meta">
-              El monto del presupuesto es la suma de estos renglones
+              Cotización original por artículos · el total pactado puede incluir una negociación posterior
             </span>
           </div>
           <div className="ob-tablewrap">
@@ -177,6 +180,10 @@ export default function Presupuesto() {
                     {plata(items.reduce((a, i) => a + i.subtotal, 0))}
                   </td>
                 </tr>
+                {Math.abs(items.reduce((a,i)=>a+Number(i.subtotal),0)-Number(p.monto_base)) > .005 && <>
+                  <tr><td /><td colSpan={4}>Ajuste negociado sobre artículos</td><td className="ob-num">{plata(Number(p.monto_base)-items.reduce((a,i)=>a+Number(i.subtotal),0))}</td></tr>
+                  <tr><td /><td colSpan={4}>Total pactado</td><td className="ob-num ob-total">{plata(p.monto_base)}</td></tr>
+                </>}
               </tfoot>
             </table>
           </div>
@@ -321,13 +328,17 @@ function EditorAcuerdo({ datos: inicial, obraId, presupuestoId, alCerrar, alGuar
   const [d, setD] = useState(inicial)
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
+  const [nuevoTotal, setNuevoTotal] = useState(String(inicial.monto_base))
+  const [totalPendiente, setTotalPendiente] = useState(false)
   const cambiar = (i, k, v) => setD((x) => ({ ...x, cuotas: x.cuotas.map((c, n) => n === i ? { ...c, [k]: v } : c) }))
   const guardar = async () => {
     setGuardando(true); setError(null)
     try {
+      const cuotas = totalPendiente ? repartirAcuerdo(d.cuotas,nuevoTotal) : d.cuotas
       await api.put(`/api/obras/${obraId}/presupuestos/${presupuestoId}/acuerdo`, {
-        huella: d.huella, nombre: d.nombre, monto_base: Number(d.monto_base), elegido: Boolean(d.elegido),
-        base_ipc: d.base_ipc, tarea_id: d.tarea_id || null, cuotas: d.cuotas.map((c) => ({
+        huella: d.huella, nombre: d.nombre, monto_base: totalAcuerdo(cuotas), elegido: Boolean(d.elegido),
+        rubro_id: Number(d.rubro_id), subrubro_id: Number(d.subrubro_id),
+        base_ipc: d.base_ipc, tarea_id: d.tarea_id || null, cuotas: cuotas.map((c) => ({
           id: c.id, tipo: c.tipo, descripcion: c.descripcion, fecha_prevista: c.fecha_prevista || null,
           monto_nominal: Number(String(c.monto_nominal).replace(',', '.')), indexa: Boolean(c.indexa),
         })),
@@ -338,10 +349,15 @@ function EditorAcuerdo({ datos: inicial, obraId, presupuestoId, alCerrar, alGuar
   return <Modal titulo="Editar acuerdo" bajada="Los pagos ya registrados se conservan. Las cuotas pagadas no se pueden alterar." alCerrar={alCerrar}>
     <Aviso error={error} alCerrar={() => setError(null)} />
     <label className="ob-campo"><span className="ob-label">Nombre / proveedor</span><input className="ob-input" value={d.nombre} onChange={(e) => setD({ ...d, nombre: e.target.value })} /></label>
+    <label className="ob-campo"><span className="ob-label">Rubro</span><SelectorCategoria tipo="rubros" className="ob-input" value={d.rubro_id} onChange={e=>setD({...d,rubro_id:e.target.value})}>{d.rubros.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</SelectorCategoria></label>
+    <label className="ob-campo"><span className="ob-label">Tipo</span><SelectorCategoria tipo="subrubros" className="ob-input" value={d.subrubro_id} onChange={e=>setD({...d,subrubro_id:e.target.value})}>{d.subrubros.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</SelectorCategoria></label>
+    <label className="ob-campo"><span className="ob-label">Nuevo total negociado · {d.moneda}</span><input className="ob-input ob-num" type="number" min="0.01" step="0.01" value={nuevoTotal} onChange={e=>{setNuevoTotal(e.target.value);setTotalPendiente(true)}} /></label>
+    <button className="ob-btn" onClick={()=>{try{setD({...d,cuotas:repartirAcuerdo(d.cuotas,nuevoTotal)});setTotalPendiente(false);setError(null)}catch(e){setError(e)}}}>Aplicar total a los desembolsos</button>
+    <p className="ob-nota">Se reparte entre los desembolsos sin pagos. También podés editar sus importes individualmente. Total a guardar: <strong>{d.moneda} {num(totalAcuerdo(d.cuotas),2)}</strong>.</p>
     <label className="ob-campo"><span className="ob-label">Presupuesto elegido</span><input type="checkbox" checked={Boolean(d.elegido)} onChange={(e) => setD({ ...d, elegido: e.target.checked })} /> Usar este acuerdo para la obra</label>
     <label className="ob-campo"><span className="ob-label">Base para el ajuste IPC</span><select className="ob-input" value={d.base_ipc} onChange={(e) => setD({ ...d, base_ipc: e.target.value })}><option value="primera_cuota">Inicio de la primera cuota</option><option value="cotizacion">Fecha de cotización</option></select></label>
     <label className="ob-campo"><span className="ob-label">Tarea vinculada</span><select className="ob-input" value={d.tarea_id || ''} onChange={(e) => setD({ ...d, tarea_id: e.target.value || null })}><option value="">Sin tarea vinculada</option>{d.proyecto.tareas.filter((t) => t.tipo === 'tarea').map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}</select></label>
-    <div className="ob-tablewrap"><table className="ob-table"><thead><tr><th>Concepto</th><th>Fecha estimada (opcional)</th><th>Monto pactado</th><th>IPC</th></tr></thead><tbody>{d.cuotas.map((c, i) => <tr key={c.id || i}><td>{c.descripcion}</td><td><input className="ob-input" type="date" value={c.fecha_prevista} onChange={(e) => cambiar(i, 'fecha_prevista', e.target.value)} /></td><td><input className="ob-input ob-num" value={c.monto_nominal} onChange={(e) => cambiar(i, 'monto_nominal', e.target.value)} /></td><td><input type="checkbox" checked={Boolean(c.indexa)} onChange={(e) => cambiar(i, 'indexa', e.target.checked)} /></td></tr>)}</tbody></table></div>
+    <div className="ob-tablewrap"><table className="ob-table"><thead><tr><th>Concepto</th><th>Fecha estimada (opcional)</th><th>Monto pactado</th><th>IPC</th></tr></thead><tbody>{d.cuotas.map((c, i) => <tr key={c.id || i}><td>{c.descripcion}{c.con_pagos && ' · con pagos'}</td><td><input className="ob-input" disabled={c.con_pagos} type="date" value={c.fecha_prevista} onChange={(e) => cambiar(i, 'fecha_prevista', e.target.value)} /></td><td><input className="ob-input ob-num" disabled={c.con_pagos || totalPendiente} aria-label={`Monto ${c.descripcion}`} value={c.monto_nominal} onChange={(e) => cambiar(i, 'monto_nominal', e.target.value)} /></td><td><input type="checkbox" disabled={c.con_pagos} checked={Boolean(c.indexa)} onChange={(e) => cambiar(i, 'indexa', e.target.checked)} /></td></tr>)}</tbody></table></div>
     <footer className="pr-editor__acciones"><button className="ob-btn" onClick={alCerrar}>Cancelar</button><button className="ob-btn ob-btn--primario" disabled={guardando} onClick={guardar}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button></footer>
   </Modal>
 }
