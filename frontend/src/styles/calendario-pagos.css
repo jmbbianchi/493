@@ -46,6 +46,7 @@
 .cp-kpis > div:last-child { border:0; }
 .cp-kpis span { color:var(--ob-ink-2); font-size:.72rem; white-space:nowrap; }
 .cp-kpis strong { font-size:.85rem; white-space:nowrap; text-align:right; margin-left:auto; }
+.cp-m2-fila { display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; }
 .cp-controles { margin-bottom:.65rem; gap:.4rem; }
 .cp-controles label { display:flex; align-items:center; gap:.4rem; font-size:.8rem; }
 .cp-controles .ob-input { width:9rem; }

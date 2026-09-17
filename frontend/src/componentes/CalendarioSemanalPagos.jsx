@@ -68,8 +68,11 @@ export default function CalendarioSemanalPagos({ obraId, superficie, destinos, p
         ['Presupuestos aprobados',modelo.aprobado,'Total pactado de todos los presupuestos confirmados, convertido a la cotización actual; sin proyección IPC'],
         ['Gasto acumulado',modelo.pagado,'Pagos realizados hasta hoy, incluidos los pagos sin presupuesto; convertidos a su cotización histórica'],
         ['Saldo pendiente',modelo.pendiente,'Todas las fechas, incluso sin programar y fuera del período visible'],
-        ['Gasto / m²',Number(superficie)>0 && modelo.pagado!=null ? Math.round(modelo.pagado/Number(superficie)) : null,`Pagado / ${num(superficie || 0,2)} m² según Datos de obra`],
-      ].map(([label,value,title])=><div key={label} title={title}><span>{label}</span><strong>{label==='Gasto / m²' && !(Number(superficie)>0) ? 'Sin superficie' : dinero(value)}</strong></div>)}</div>
+      ].map(([label,value,title])=><div key={label} title={title}><span>{label}</span><strong>{dinero(value)}</strong></div>)}
+        <div className="cp-m2">{[['Valor m²',modelo.aprobado,'Presupuestos aprobados'],['Gasto m²',modelo.pagado,'Gasto acumulado']].map(([label,valor,base])=>
+          <div className="cp-m2-fila" key={label} title={`${base} / ${num(superficie || 0,2)} m² según Datos de obra`}><span>{label}</span><strong>{!(Number(superficie)>0) ? 'Sin superficie' : dinero(valor==null ? null : Math.round(valor/Number(superficie)))}</strong></div>
+        )}</div>
+      </div>
       <div className="cp-controles">
         <div className="cp-switch" role="group" aria-label="Vista de gastos"><button aria-pressed={modo==='semanas'} onClick={()=>setModo('semanas')}>Por semana</button><button aria-pressed={modo==='rubros'} onClick={()=>setModo('rubros')}>Por rubro</button></div>
         {modo==='semanas' && <><button className="ob-btn" aria-label="12 semanas anteriores" onClick={()=>setInicio(sumarDias(inicio,-84))}>←</button>
