@@ -10,6 +10,8 @@ import { plata, num, fecha } from '../formato'
 import Adjuntos from '../componentes/Adjuntos'
 import {tiposDocumento} from '../documentos'
 import '../styles/datos-obra.css'
+import FiltrosPagos from '../componentes/FiltrosPagos'
+import {filtrosVacios,filtrarPagos} from '../filtrosPagos'
 
 /**
  * Registrar Pago: lo que se pagó, y el botón para cargar uno nuevo.
@@ -35,6 +37,8 @@ export default function Pagar() {
   const [abiertoPago, setAbiertoPago] = useState(null)
   const [hecho, setHecho] = useState(null)
   const [saldos,setSaldos]=useState({})
+  const [filtros,setFiltros]=useState(filtrosVacios)
+  useEffect(()=>{setFiltros(filtrosVacios())},[obra.id])
 
   const cargar = async () => {
     try {
@@ -74,7 +78,8 @@ export default function Pagar() {
   if (error) return <Aviso error={error} alCerrar={() => setError(null)} />
   if (!destinos) return <p className="ob-cargando">Cargando…</p>
 
-  const vivos = pagos.filter((p) => !p.anulado)
+  const visibles = filtrarPagos(pagos,documentos,filtros)
+  const vivos = visibles.filter((p) => !p.anulado)
   const saldoDe = (p) => p.presupuesto_id ? saldos[p.presupuesto_id] : null
   const importeSaldo = (p, campo='saldo') => saldoDe(p)?.[campo] == null ? 'Sin cotización' : `${saldoDe(p).moneda} ${num(saldoDe(p)[campo],2)}`
   const totalArs = vivos.filter((p) => p.moneda === 'ARS')
@@ -88,9 +93,9 @@ export default function Pagar() {
       <div className="ob-toolbar">
         <h2 style={{margin:0}}>Registro de Pagos</h2>
         <span className="ob-toolbar__meta">
-          {vivos.length === 0 ? 'Ningún pago registrado todavía' : (
+          {vivos.length === 0 ? 'Sin pagos vigentes en esta selección' : (
             <>
-              {vivos.length} pago(s) · {plata(totalArs)}
+              {vivos.length} pago(s) visibles · {plata(totalArs)}
               {totalUsd > 0 && ` · u$d ${num(totalUsd, 2)}`}
             </>
           )}
@@ -100,6 +105,8 @@ export default function Pagar() {
           </button>
         </span>
       </div>
+
+      <FiltrosPagos pagos={pagos} documentos={documentos} presupuestos={saldos} valor={filtros} onChange={setFiltros} cantidad={visibles.length}/>
 
       {hecho && (
         <div className="ob-pagar__hecho" style={{ margin: 'var(--ob-gap-4)' }}>
@@ -186,7 +193,8 @@ export default function Pagar() {
               </tr>
             </thead>
             <tbody>
-              {pagos.map((p) => <Fragment key={p.id}>
+              {!visibles.length && <tr><td colSpan={9}>No hay pagos que coincidan con los filtros. Probá otra búsqueda o limpiá la selección.</td></tr>}
+              {visibles.map((p) => <Fragment key={p.id}>
                 <tr key={p.id} className={p.anulado ? 'ob-pago--anulado' : undefined} onClick={() => setAbiertoPago(abiertoPago === p.id ? null : p.id)}>
                   <td>{fecha(p.fecha)}</td>
                   <td>{p.rubro}</td>
