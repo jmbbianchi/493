@@ -27,7 +27,7 @@ export function tesoreria({ presupuestos, pagos, programaciones = [], tasas = []
   const cuotas = new Map(), libres = new Map(), incompletos = new Set(), registros = []
   const presupuestosPorId = new Map(presupuestos.map(p => [String(p.id), p]))
   const categoria = p => ({ rubro_id:p.rubro_id, rubro:p.rubro || 'Sin rubro', tipo_id:p.subrubro_id ?? '', tipo:p.subrubro || 'Sin tipo' })
-  for (const p of presupuestos) for (const q of (p.cuotas || []).filter(q => q.estado !== 'anulada')) {
+  for (const p of presupuestos.filter(p => !p.cerrado)) for (const q of (p.cuotas || []).filter(q => q.estado !== 'anulada')) {
     const manual = porFecha.get(String(q.id))
     cuotas.set(String(q.id), { ...categoria(p), id:String(q.id), presupuesto_id:String(p.id), nombre:p.nombre,
       descripcion:q.descripcion || 'Cuota', moneda:p.moneda, nominal:cents(q.monto_nominal),

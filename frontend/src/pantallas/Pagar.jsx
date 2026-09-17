@@ -140,7 +140,7 @@ export default function Pagar() {
             ['Notas',detalle.notas || 'Sin notas'],['Estado',detalle.anulado ? `Anulado: ${detalle.anulado_motivo || ''}` : 'Registrado'],
           ].map(([titulo,valor])=><div key={titulo}><dt>{titulo}</dt><dd>{valor}</dd></div>)}
         </dl>
-        <div className="rp-acciones">{!detalle.anulado && <><button className="ob-btn" onClick={()=>setEditando(editando ? null : detalle)}>{editando?'Cerrar edición':'Editar pago'}</button><button className="ob-btn" onClick={()=>anular(detalle)}>Anular</button></>}<button className="ob-btn" onClick={()=>eliminar(detalle)}>Eliminar definitivamente</button></div>
+        {detalle.presupuesto_cierre_fecha ? <p>Presupuesto cerrado el {fecha(detalle.presupuesto_cierre_fecha)}. Este pago se conserva como historial.</p> : <div className="rp-acciones">{!detalle.anulado && <><button className="ob-btn" onClick={()=>setEditando(editando ? null : detalle)}>{editando?'Cerrar edición':'Editar pago'}</button><button className="ob-btn" onClick={()=>anular(detalle)}>Anular</button></>}<button className="ob-btn" onClick={()=>eliminar(detalle)}>Eliminar definitivamente</button></div>}
         {editando && <EditarPago key={detalle.id} pago={detalle} obraId={obra.id} alGuardar={()=>{setEditando(null);setHecho(null);cargar();tocado()}}/>}
         <Adjuntos obra={obra} colgar={{pago_id:detalle.id}} tipo="recibo" titulo="Recibos y comprobantes" clasificar provistos={documentos[detalle.id] ?? []} alCambiar={cargar}/>
       </Modal>}
@@ -263,14 +263,14 @@ function Formulario({ obra, destinos, alGuardar }) {
     : destinos.subrubros
 
   const candidatos = destinos.presupuestos.filter((p) =>
-    String(p.rubro_id) === String(rubroId)
+    !p.cerrado && String(p.rubro_id) === String(rubroId)
     && (!subrubroId || String(p.subrubro_id) === String(subrubroId)))
 
   // Cascada: elegir el rubro deja puesto el tipo y el presupuesto
   // cuando no hay nada que decidir. Es lo que sostiene los quince segundos.
   const elegirRubro = (id) => {
     setRubroId(id)
-    const suyos = destinos.presupuestos.filter((p) => String(p.rubro_id) === String(id))
+    const suyos = destinos.presupuestos.filter((p) => !p.cerrado && String(p.rubro_id) === String(id))
     const unicos = [...new Set(suyos.map((p) => p.subrubro_id))]
     const sub = unicos.length === 1 ? String(unicos[0]) : ''
     setSubrubroId(sub)
@@ -281,7 +281,7 @@ function Formulario({ obra, destinos, alGuardar }) {
   const elegirSubrubro = (id) => {
     setSubrubroId(id)
     const posibles = destinos.presupuestos.filter((p) =>
-      String(p.rubro_id) === String(rubroId) && String(p.subrubro_id) === String(id))
+      !p.cerrado && String(p.rubro_id) === String(rubroId) && String(p.subrubro_id) === String(id))
     setPresupuestoId(posibles.length === 1 ? posibles[0].id : '')
   }
 

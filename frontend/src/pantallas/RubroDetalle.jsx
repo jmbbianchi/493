@@ -126,7 +126,7 @@ export default function RubroDetalle() {
                   <td>
                     <span className={`ob-chip ob-chip--${
                       p.estado === 'confirmado' ? 'ok' : p.estado === 'anulado' ? 'bad' : 'mudo'}`}>
-                      {p.estado}
+                      {p.cierre_fecha ? 'Cerrado · saldo cancelado' : p.estado}
                     </span>
                   </td>
                 </tr>

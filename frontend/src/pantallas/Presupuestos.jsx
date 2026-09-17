@@ -195,7 +195,8 @@ export default function Presupuestos() {
                       <td className="ob-num">{importeSaldo(c.id, 'saldo')}</td>
                       <td>
                         <span className={`ob-chip ob-chip--${
-                          c.estado === 'confirmado' ? 'ok' : 'mudo'}`}>{c.estado}</span>
+                          c.estado === 'confirmado' ? 'ok' : 'mudo'}`}>{saldos[c.id]?.cerrado ? 'Cerrado · 100 % resuelto' : c.estado}</span>
+                        {saldos[c.id]?.cerrado && <small className="ob-table__sec">Cancelado: {c.moneda} {num(saldos[c.id].cancelado,2)}</small>}
                       </td>
                       <td style={{ width: '7rem' }}>
                         <Link className="ob-btn" to={`/obra/${obra.id}/rubros/${g.rubro_id}/presupuestos/${c.id}`}>Detalle</Link>

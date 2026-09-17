@@ -282,7 +282,7 @@ def listar(obra_id: str, rubro_id: int | None = None):
                p.subrubro_id, s.nombre AS subrubro,
                p.proveedor_id, pr.nombre AS proveedor,
                p.nombre, p.origen, p.monto_base, p.moneda, p.fecha_base,
-               p.estado, p.elegido, p.notas,
+               p.estado, p.elegido, p.notas, p.cierre_fecha,
                (SELECT COUNT(*) FROM dbo.cuota c
                  WHERE c.presupuesto_id = p.id AND c.estado <> 'anulada') AS cuotas,
                (SELECT COUNT(*) FROM dbo.presupuesto_item i
@@ -439,7 +439,8 @@ def confirmar(obra_id: str, presupuesto_id: str):
 @router.post("/presupuestos/{presupuesto_id}/anular")
 def anular(obra_id: str, presupuesto_id: str, a: Anulacion):
     """Se anula, no se borra: con quien negociaste y cuanto te pidio es historia."""
-    _traer(obra_id, presupuesto_id)
+    from ..cierres import exigir_abierto
+    exigir_abierto(_traer(obra_id, presupuesto_id))
     with db.cursor() as cur:
         cur.execute(
             """UPDATE dbo.presupuesto
@@ -448,6 +449,58 @@ def anular(obra_id: str, presupuesto_id: str, a: Anulacion):
         cur.execute(
             "UPDATE dbo.cuota SET estado = 'anulada' WHERE presupuesto_id = %s", (presupuesto_id,))
     return {"estado": "anulado"}
+
+
+class CierrePresupuesto(BaseModel):
+    fecha: date
+    motivo: str = Field(min_length=3, max_length=1000)
+    monto_cancelado: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
+    reemplazo_id: uuid.UUID | None = None
+
+
+@router.post('/presupuestos/{presupuesto_id}/cerrar')
+def cerrar(obra_id: str, presupuesto_id: str, datos: CierrePresupuesto):
+    from ..fechas import hoy_argentina
+    from ..cierres import exigir_abierto
+    from .desembolsos import leer
+    if len(datos.motivo.strip()) < 3 or datos.fecha > hoy_argentina():
+        raise HTTPException(422, 'Indicá el motivo y una fecha de cierre no futura.')
+    # Comparar el estado antes y después del cálculo evita cerrar sobre pagos nuevos.
+    with db.cursor() as cur:
+        _, _, _, _, revision = leer(cur, obra_id, presupuesto_id)
+    detalle = ver(obra_id, presupuesto_id)
+    total = detalle['total']
+    if total.get('pagos_sin_convertir') or total['saldo'] is None:
+        raise HTTPException(409, 'Falta cotización para calcular el saldo a cancelar.')
+    saldo = Decimal(str(total['saldo'])).quantize(Decimal('0.01'))
+    if saldo <= 0 or saldo != datos.monto_cancelado:
+        raise HTTPException(409, 'El saldo cambió. Recargá y revisá el importe a cancelar.')
+    with db.cursor() as cur:
+        p, _, pagos, _, actual = leer(cur, obra_id, presupuesto_id)
+        # Retener presupuesto y pagos hasta grabar el cierre.
+        cur.execute('SELECT id FROM dbo.presupuesto WITH (UPDLOCK,HOLDLOCK) WHERE id=%s', (presupuesto_id,))
+        cur.fetchone()
+        cur.execute('SELECT id FROM dbo.pago WITH (UPDLOCK,HOLDLOCK) WHERE presupuesto_id=%s', (presupuesto_id,))
+        cur.fetchall()
+        _, _, _, _, ultima = leer(cur, obra_id, presupuesto_id)
+        if revision != actual or actual != ultima:
+            raise HTTPException(409, 'El acuerdo o sus pagos cambiaron. Recargá antes de cerrar.')
+        exigir_abierto(p)
+        if p['estado'] != 'confirmado':
+            raise HTTPException(409, 'Solo se puede cerrar un presupuesto confirmado.')
+        cur.execute('SELECT fecha FROM dbo.pago WHERE presupuesto_id=%s AND anulado=0 AND fecha>%s', (presupuesto_id, datos.fecha))
+        if cur.fetchone():
+            raise HTTPException(409, 'La fecha de cierre no puede ser anterior a un pago registrado.')
+        reemplazo = str(datos.reemplazo_id) if datos.reemplazo_id else None
+        if reemplazo:
+            cur.execute("SELECT id FROM dbo.presupuesto WHERE id=%s AND obra_id=%s AND id<>%s AND estado<>'anulado' AND cierre_fecha IS NULL", (reemplazo, obra_id, presupuesto_id))
+            if not cur.fetchone():
+                raise HTTPException(422, 'El reemplazo debe ser otro presupuesto abierto de esta obra.')
+        cur.execute('''UPDATE dbo.presupuesto SET cierre_fecha=%s,cierre_motivo=%s,
+            cierre_cancelado=%s,cierre_pagado=%s,cierre_proyectado=%s,cierre_reemplazo_id=%s,
+            cierre_registrado_en=sysutcdatetime() WHERE id=%s AND obra_id=%s''',
+            (datos.fecha,datos.motivo.strip(),saldo,total['pagado'],total['proyectado'],reemplazo,presupuesto_id,obra_id))
+    return {'cerrado': True, 'cancelado': float(saldo), 'saldo': 0}
 
 
 @router.get("/presupuestos/{presupuesto_id}")
@@ -496,6 +549,8 @@ def ver(obra_id: str, presupuesto_id: str):
     from ..monedas import pagos_convertidos, saldo
     pagos_convertidos(pagos, p['moneda'])
     total.update(saldo(pagos, p['moneda'], total['nominal'], total['proyectado']))
+    from ..cierres import aplicar_cierre
+    aplicar_cierre(total, p)
 
     return {
         "presupuesto": {k: (str(v) if k == "id" else v) for k, v in p.items()},
@@ -521,7 +576,9 @@ def ver(obra_id: str, presupuesto_id: str):
 def _traer(obra_id: str, presupuesto_id: str) -> dict:
     filas = db.query(
         """SELECT id, obra_id, rubro_id, subrubro_id, proveedor_id, nombre,
-                  origen, monto_base, moneda, fecha_base, estado, elegido, notas
+                  origen, monto_base, moneda, fecha_base, estado, elegido, notas,
+                  cierre_fecha,cierre_motivo,cierre_cancelado,cierre_pagado,
+                  cierre_proyectado,cierre_reemplazo_id,cierre_registrado_en
            FROM dbo.presupuesto WHERE id = %s AND obra_id = %s""",
         (presupuesto_id, obra_id))
     if not filas:
@@ -542,7 +599,8 @@ def resumen_por_rubro(obra_id: str):
     rubro, porque db.py abre y cierra por operacion.
     """
     filas = db.query(
-        """SELECT p.rubro_id, p.fecha_base, c.orden, c.tipo, c.descripcion,
+        """SELECT p.rubro_id, p.fecha_base, p.monto_base AS presupuesto_nominal,
+                  p.cierre_fecha,p.cierre_pagado, c.orden, c.tipo, c.descripcion,
                   c.fecha_prevista, c.fecha_base_ipc, c.monto_nominal, c.indexa, c.estado
            FROM dbo.v_cuota_programada c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
@@ -573,6 +631,12 @@ def resumen_por_rubro(obra_id: str):
                                       "real": Decimal(0), "cuotas": 0, "sin_coeficiente": 0})
             r["nominal"] += Decimal(str(c["monto_nominal"]))
             r["cuotas"] += 1
+            if c.get('cierre_fecha'):
+                # La parte cancelada no vuelve a ser deuda en el resumen del rubro.
+                efectivo = Decimal(str(c['cierre_pagado'])) * Decimal(str(c['monto_nominal'])) / Decimal(str(c['presupuesto_nominal']))
+                r['proyectado'] += efectivo
+                r['real'] += efectivo
+                continue
             if c["monto_proyectado"] is not None:
                 r["proyectado"] += c["monto_proyectado"]
             if c["monto_real"] is not None:

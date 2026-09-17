@@ -8,6 +8,7 @@ import Modal from '../componentes/Modal'
 import SelectorCategoria from '../componentes/SelectorCategoria'
 import { totalAcuerdo, repartirAcuerdo } from '../acuerdos'
 import { plata, num, fecha } from '../formato'
+import CerrarPresupuesto from '../componentes/CerrarPresupuesto'
 
 /**
  * Un presupuesto con su plan de pago abierto cuota por cuota.
@@ -27,6 +28,7 @@ export default function Presupuesto() {
   const [items, setItems] = useState([])
   const [guardandoItems, setGuardandoItems] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [cerrando, setCerrando] = useState(false)
 
   const cargar = () => {
     setD(null)
@@ -78,8 +80,8 @@ export default function Presupuesto() {
         </button>
         <span className="ob-label" style={{ marginLeft: 'var(--ob-gap-3)' }}>{p.nombre}</span>
         <span className={`ob-chip ob-chip--${borrador ? 'mudo' : 'ok'}`}
-          style={{ marginLeft: 'var(--ob-gap-2)' }}>{p.estado}</span>
-        {p.estado === 'confirmado' ? (
+          style={{ marginLeft: 'var(--ob-gap-2)' }}>{t.cerrado ? 'Cerrado' : p.estado}</span>
+        {p.estado === 'confirmado' && !t.cerrado ? (
           <span className="ob-chip ob-chip--ok" style={{ marginLeft: 'var(--ob-gap-2)' }}>
             Aprobado para pagos
           </span>
@@ -88,8 +90,18 @@ export default function Presupuesto() {
           Base {fecha(p.fecha_base)} · {p.moneda}
           {p.origen === 'items' ? ' · por artículos' : ' · monto único'}
         </span>
-        <button className="ob-btn" onClick={abrirEdicion} style={{ marginLeft: 'var(--ob-gap-2)' }}>Editar acuerdo</button>
+        {!t.cerrado && <button className="ob-btn" onClick={abrirEdicion} style={{ marginLeft: 'var(--ob-gap-2)' }}>Editar acuerdo</button>}
+        {p.estado === 'confirmado' && !t.cerrado && t.saldo > 0 && <button className="ob-btn" onClick={()=>setCerrando(true)}>Cerrar con saldo cancelado</button>}
       </div>
+
+      {t.cerrado && <section className="ob-card" style={{margin:'1rem',padding:'1rem'}}>
+        <h2>Cerrado · 100 % resuelto</h2>
+        <p>Fecha de cierre: <b>{fecha(p.cierre_fecha)}</b> · Pagado: <b>{plata(t.pagado)}</b> · Cancelado sin pago: <b>{plata(t.cancelado)}</b> · Pendiente: <b>{plata(0)}</b></p>
+        <p><b>Motivo:</b> {p.cierre_motivo}</p>
+        {p.cierre_reemplazo_id && <button className="ob-btn" onClick={()=>navegar(`/obra/${obra.id}/rubros/${p.rubro_id}/presupuestos/${p.cierre_reemplazo_id}`)}>Ver presupuesto reemplazante</button>}
+        <p>El monto original y los pagos se conservan. El saldo cancelado no es un gasto ni un pago.</p>
+      </section>}
+      {cerrando && <CerrarPresupuesto obraId={obra.id} presupuesto={p} total={t} alCerrar={()=>setCerrando(false)} alGuardar={()=>{setCerrando(false);cargar()}}/>}
 
       {borrador && (
         <div className="ob-nota" style={{ padding: 'var(--ob-gap-4)' }}>
@@ -105,9 +117,9 @@ export default function Presupuesto() {
 
       {!borrador && (
         <div className="ob-tres">
-          <Numero rotulo="Proyectado" valor={plata(t.proyectado)}
+          <Numero rotulo={t.cerrado ? 'Total al cierre' : 'Proyectado'} valor={plata(t.proyectado)}
             resalta={t.diferencia > 0}
-            pie={`Nominal ${plata(t.nominal)}, o sea ${plata(t.diferencia)} más. `
+            pie={t.cerrado ? `Monto original ${plata(t.nominal)}. Incluye ${plata(t.cancelado)} cancelados sin pago.` : `Nominal ${plata(t.nominal)}, o sea ${plata(t.diferencia)} más. `
               + (t.cuotas_proyectadas > 0
                 ? `${t.cuotas_proyectadas} de ${t.cuotas} cuotas estimadas con IPC de ${num(d.proyeccion.variacion_mensual_usada, 1)} % mensual, la última publicada (${fecha(d.proyeccion.ultimo_mes_publicado)}).`
                 : 'Todas las cuotas tienen coeficiente publicado.')} />
@@ -116,7 +128,7 @@ export default function Presupuesto() {
               ? `Llevás pagado el ${num(t.avance_pago_pct, 1)} % de lo proyectado.`
               : 'Todavía no se registró ningún pago contra este presupuesto.'} />
           <Numero rotulo="Falta pagar" valor={plata(t.saldo)}
-            pie="Contra el proyectado, no contra el nominal: lo que falta de verdad incluye el ajuste." />
+            pie={t.cerrado ? `Saldo cancelado: ${plata(t.cancelado)}. Presupuesto resuelto al 100 %.` : 'Contra el proyectado, no contra el nominal: incluye el ajuste.'} />
         </div>
       )}
 
@@ -180,7 +192,7 @@ export default function Presupuesto() {
         </>
       )}
 
-      {!borrador && (
+      {!borrador && !t.cerrado && (
         <div className="ob-tablewrap">
           <table className="ob-table">
             <thead>
@@ -295,7 +307,7 @@ export default function Presupuesto() {
       </div>
 
       <div style={{ padding: '0 var(--ob-gap-4) var(--ob-gap-4)' }}>
-        <button className="ob-btn" onClick={anular}>Anular este presupuesto</button>
+        {!t.cerrado && <button className="ob-btn" onClick={anular}>Anular este presupuesto</button>}
         <span className="ob-nota" style={{ marginLeft: 'var(--ob-gap-3)', padding: 0 }}>
           No se borra: queda con el motivo, porque con quién negociaste es historia.
         </span>

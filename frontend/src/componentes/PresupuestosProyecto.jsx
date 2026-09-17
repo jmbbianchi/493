@@ -30,7 +30,7 @@ export default function PresupuestosProyecto({ obraId, proyecto, editable, alAct
   useEffect(() => { cargar() }, [obraId, proyecto.version])
 
   const tareas = useMemo(() => proyecto.tareas.filter((t) => t.tipo !== 'grupo'), [proyecto.tareas])
-  const calendario = useMemo(() => (datos?.presupuestos || []).filter((p) => p.estado === 'confirmado').flatMap((p) =>
+  const calendario = useMemo(() => (datos?.presupuestos || []).filter((p) => p.estado === 'confirmado' && !p.detalle?.total?.cerrado).flatMap((p) =>
     (p.detalle?.cuotas || []).filter((c) => c.estado !== 'anulada').map((c) => ({ ...c, presupuesto: p.nombre, presupuesto_id: p.id, moneda: p.moneda, elegido: p.elegido })))
     .sort((a, b) => String(a.fecha_prevista).localeCompare(String(b.fecha_prevista))), [datos])
 
@@ -45,7 +45,7 @@ export default function PresupuestosProyecto({ obraId, proyecto, editable, alAct
       {datos.presupuestos.length === 0 ? <div className="pr-finanzas__vacio"><p>No hay presupuestos confirmados para vincular. Cargalos desde Presupuestos y volvé acá.</p></div> :
         <div className="pr-presupuestos">
           {datos.presupuestos.map((p) => <article className="pr-presupuesto" key={p.id}>
-            <div><span className="ob-label">Confirmado</span><h3>{p.nombre}</h3>
+            <div><span className="ob-label">{p.detalle?.total?.cerrado ? 'Cerrado · saldo cancelado' : 'Confirmado'}</span><h3>{p.nombre}</h3>
               <p>{p.tareas} tarea(s) · {p.fecha_inicio ? `${fechaBreve(p.fecha_inicio)} — ${fechaBreve(p.fecha_fin)}` : 'Sin tareas con fechas'}</p></div>
             <strong className="ob-num">{plata(p.monto_base)} {p.moneda}</strong>
             {editable && <button className="ob-btn" onClick={() => setSeleccionado(p)}>Vincular tareas</button>}

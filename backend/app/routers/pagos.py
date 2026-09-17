@@ -73,11 +73,13 @@ def registrar(obra_id: str, p: PagoNuevo):
             from .proyecto import _abrir, _incrementar
             _abrir(cur, obra_id, p.proyecto_version)
         if p.presupuesto_id:
-            cur.execute("""SELECT rubro_id, subrubro_id, estado, elegido FROM dbo.presupuesto WITH (UPDLOCK, HOLDLOCK)
+            cur.execute("""SELECT rubro_id, subrubro_id, estado, elegido, cierre_fecha FROM dbo.presupuesto WITH (UPDLOCK, HOLDLOCK)
                            WHERE id=%s AND obra_id=%s""", (p.presupuesto_id, obra_id))
             presupuesto = cur.fetchone()
             if not presupuesto:
                 raise HTTPException(404, "Ese presupuesto no es de esta obra.")
+            from ..cierres import exigir_abierto
+            exigir_abierto(presupuesto)
             if presupuesto["estado"] != "confirmado":
                 raise HTTPException(409, "Confirmá el presupuesto para asignarle pagos.")
             if presupuesto["rubro_id"] != p.rubro_id:
@@ -141,7 +143,7 @@ def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None
                g.subrubro_id, s.nombre AS subrubro,
                g.presupuesto_id, g.cuota_id, p.nombre AS presupuesto, c.descripcion AS cuota_descripcion,
                g.fecha, g.monto, g.moneda, g.medio, g.notas,
-               g.anulado, g.anulado_motivo
+               g.anulado, g.anulado_motivo, p.cierre_fecha AS presupuesto_cierre_fecha
         FROM dbo.pago g
         JOIN dbo.rubro r ON r.id = g.rubro_id
         LEFT JOIN dbo.subrubro s ON s.id = g.subrubro_id
@@ -180,10 +182,11 @@ class PagoEdicion(BaseModel):
 @router.patch("/pagos/{pago_id}")
 def editar(obra_id: str, pago_id: str, p: PagoEdicion):
     n = db.execute("""UPDATE dbo.pago SET fecha=%s, monto=%s, medio=%s, notas=%s, moneda=COALESCE(%s,moneda)
-        WHERE id=%s AND obra_id=%s AND anulado=0""",
+        WHERE id=%s AND obra_id=%s AND anulado=0
+        AND NOT EXISTS (SELECT 1 FROM dbo.presupuesto p WHERE p.id=dbo.pago.presupuesto_id AND p.cierre_fecha IS NOT NULL)""",
         (p.fecha, p.monto, p.medio, p.notas, p.moneda, pago_id, obra_id))
     if not n:
-        raise HTTPException(404, "No existe ese pago o está anulado.")
+        raise HTTPException(409, "El pago no está disponible para editar: puede estar anulado o pertenecer a un presupuesto cerrado.")
     return {"id": pago_id}
 
 
@@ -193,6 +196,9 @@ def eliminar(obra_id: str, pago_id: str):
         cur.execute('SELECT id FROM dbo.pago WITH (UPDLOCK,HOLDLOCK) WHERE id=%s AND obra_id=%s', (pago_id,obra_id))
         if not cur.fetchone():
             raise HTTPException(404, 'No existe ese pago en esta obra.')
+        cur.execute('SELECT p.cierre_fecha FROM dbo.presupuesto p WITH (UPDLOCK,HOLDLOCK) JOIN dbo.pago g ON g.presupuesto_id=p.id WHERE g.id=%s AND g.obra_id=%s', (pago_id,obra_id))
+        from ..cierres import exigir_abierto
+        exigir_abierto(cur.fetchone() or {})
         # Los archivos siguen disponibles en Documentación, sin referencia rota.
         cur.execute('UPDATE dbo.documento SET pago_id=NULL WHERE pago_id=%s AND obra_id=%s', (pago_id,obra_id))
         cur.execute('DELETE FROM dbo.pago WHERE id=%s AND obra_id=%s', (pago_id,obra_id))
@@ -205,10 +211,11 @@ def anular(obra_id: str, pago_id: str, a: Anulacion):
     el pago queda con el motivo y deja de sumar."""
     n = db.execute(
         """UPDATE dbo.pago SET anulado = 1, anulado_motivo = %s
-           WHERE id = %s AND obra_id = %s AND anulado = 0""",
+           WHERE id = %s AND obra_id = %s AND anulado = 0
+           AND NOT EXISTS (SELECT 1 FROM dbo.presupuesto p WHERE p.id=dbo.pago.presupuesto_id AND p.cierre_fecha IS NOT NULL)""",
         (a.motivo, pago_id, obra_id))
     if not n:
-        raise HTTPException(404, "No existe ese pago, o ya estaba anulado.")
+        raise HTTPException(409, "El pago no está disponible o pertenece a un presupuesto cerrado.")
     return {"anulado": True}
 
 
@@ -229,7 +236,8 @@ def destinos(obra_id: str):
     presupuestos = db.query(
         """SELECT p.id, p.rubro_id, r.nombre AS rubro,
                   p.subrubro_id, s.nombre AS subrubro,
-                  p.nombre, p.monto_base, p.fecha_base, p.moneda
+                  p.nombre, p.monto_base, p.fecha_base, p.moneda,
+                  p.cierre_fecha,p.cierre_cancelado,p.cierre_pagado,p.cierre_proyectado
            FROM dbo.presupuesto p
            JOIN dbo.rubro r ON r.id = p.rubro_id
            JOIN dbo.subrubro s ON s.id = p.subrubro_id
@@ -296,4 +304,7 @@ def destinos(obra_id: str):
         pagos_convertidos(propios, p['moneda'], tasas)
         p.update(saldo(propios, p['moneda'], p['nominal'], p['proyectado']))
         p['avance_nominal_pct'] = None if p['pagos_sin_convertir'] or not p['nominal'] else p['pagado']/p['nominal']*100
+        from ..cierres import aplicar_cierre
+        original = next(x for x in presupuestos if str(x['id']) == p['id'])
+        aplicar_cierre(p, original)
     return {"rubros": rubros, "subrubros": subrubros, "presupuestos": salida}

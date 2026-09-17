@@ -45,7 +45,7 @@ def leer(cur, obra_id, presupuesto_id):
         raise HTTPException(404, "No existe el presupuesto.")
     cur.execute("SELECT id,tipo,descripcion,fecha_prevista,monto_nominal,indexa,estado,orden FROM dbo.cuota WHERE presupuesto_id=%s ORDER BY orden", (presupuesto_id,))
     cuotas = cur.fetchall()
-    cur.execute("SELECT id,cuota_id,monto,moneda,anulado FROM dbo.pago WHERE presupuesto_id=%s ORDER BY id", (presupuesto_id,))
+    cur.execute("SELECT id,cuota_id,fecha,monto,moneda,anulado FROM dbo.pago WHERE presupuesto_id=%s ORDER BY id", (presupuesto_id,))
     pagos = cur.fetchall()
     cur.execute("SELECT base_ipc,tarea_id FROM dbo.presupuesto_programacion WHERE presupuesto_id=%s", (presupuesto_id,))
     config = cur.fetchone() or {"base_ipc":"cotizacion", "tarea_id":None}
@@ -83,6 +83,8 @@ def validar(datos, anteriores, pagos):
 def guardar(obra_id: str, presupuesto_id: str, datos: Acuerdo):
     with db.cursor() as cur:
         p, anteriores, pagos, config, huella = leer(cur,obra_id,presupuesto_id)
+        from ..cierres import exigir_abierto
+        exigir_abierto(p)
         if huella!=datos.huella:
             raise HTTPException(409,"Cambió el presupuesto o recibió un pago. Recargá antes de editar.")
         if p["estado"]=="anulado":
