@@ -1,9 +1,10 @@
+import { hoyArgentina } from '../fechas'
 import { useEffect, useState } from 'react'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
 import { plata, fecha } from '../formato'
 export default function Financiacion({ obra }) {
-  const [d, setD] = useState({ capital: '', tasa_anual: 0, meses: 12, inicio: new Date().toISOString().slice(0,10), ajuste_mensual: 0, adelanto_meses: 0 })
+  const [d, setD] = useState({ capital: '', tasa_anual: 0, meses: 12, inicio: hoyArgentina(), ajuste_mensual: 0, adelanto_meses: 0 })
   const [r, setR] = useState(null); const [error, setError] = useState(null); const set = (k) => (e) => setD({ ...d, [k]: e.target.value })
   useEffect(() => { api.get(`/api/obras/${obra.id}/financiacion`).then((x) => x && setD({ ...x, capital: String(x.capital), tasa_anual: String(x.tasa_anual), meses: String(x.meses), ajuste_mensual: String(x.ajuste_mensual), adelanto_meses: String(x.adelanto_meses) })).catch(() => {}) }, [obra.id])
   const calcular = async (e) => { e.preventDefault(); try { const datos = { ...d, capital: Number(d.capital), tasa_anual: Number(d.tasa_anual), meses: Number(d.meses), ajuste_mensual: Number(d.ajuste_mensual), adelanto_meses: Number(d.adelanto_meses) }; await api.put(`/api/obras/${obra.id}/financiacion`, datos); setR(await api.post(`/api/obras/${obra.id}/financiacion/proyeccion`, datos)) } catch (x) { setError(x) } }

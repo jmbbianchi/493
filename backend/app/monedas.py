@@ -1,4 +1,5 @@
 """Saldos en moneda contractual y equivalencias con fecha explícita."""
+from .fechas import hoy_argentina
 from datetime import date
 from decimal import Decimal
 from . import db
@@ -28,7 +29,7 @@ def pagos_convertidos(pagos, moneda, cache=None):
     return pagos
 
 def saldo(pagos, moneda, nominal, proyectado):
-    hoy = date.today()
+    hoy = hoy_argentina()
     vivos = [p for p in pagos if not p['anulado'] and p['fecha'] <= hoy]
     total = sum((p['monto_presupuesto'] for p in vivos if p['monto_presupuesto'] is not None), Decimal(0))
     faltantes = sum(p['monto_presupuesto'] is None for p in vivos)

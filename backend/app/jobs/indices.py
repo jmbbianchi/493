@@ -37,6 +37,7 @@ Fuentes verificadas el 28-ago-2026:
         parametros: desde, hasta, limit (10-3000, default 1000), offset
         respuesta: {"metadata": {...}, "results": [{"detalle": [...]}]}
 """
+from ..fechas import hoy_argentina
 import datetime as dt
 import os
 import sys
@@ -202,7 +203,7 @@ def _encadenar_ipc() -> int:
 
 
 def main() -> int:
-    hoy = dt.date.today()
+    hoy = hoy_argentina()
     refresco = (hoy - dt.timedelta(days=REFRESCO_DIAS)).isoformat()
     total = 0
 

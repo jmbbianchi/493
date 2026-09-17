@@ -1,3 +1,4 @@
+import { hoyArgentina } from '../fechas'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as api from '../api'
 import { semana } from '../calendarioPagos'
@@ -7,7 +8,7 @@ import Modal from './Modal'
 import '../styles/calendario-pagos.css'
 
 export default function CalendarioSemanalPagos({ obraId, superficie, destinos, pagos }) {
-  const hoy = new Date().toLocaleDateString('en-CA')
+  const hoy = hoyArgentina()
   const [inicio,setInicio] = useState(semana(hoy)), [moneda,setMoneda] = useState('ARS'), [modo,setModo] = useState('semanas')
   const [datos,setDatos] = useState(null), [programaciones,setProgramaciones] = useState([]), [tasas,setTasas] = useState([])
   const [error,setError] = useState(''), [recarga,setRecarga] = useState(0), [aviso,setAviso] = useState('')

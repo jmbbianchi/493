@@ -1,3 +1,4 @@
+import { hoyArgentina } from '../fechas'
 import SelectorCategoria from '../componentes/SelectorCategoria'
 import { useEffect, useState } from 'react'
 import { useOutletContext, Link } from 'react-router-dom'
@@ -220,7 +221,7 @@ export default function Presupuestos() {
 function Alta({ obra, rubros, subrubros, alCrear }) {
   const [items, setItems] = useState([{ descripcion: '', cantidad: 1, unidad: '', precio_unitario: '' }])
   const [creadoId, setCreadoId] = useState(null)
-  const hoy = new Date().toISOString().slice(0, 10)
+  const hoy = hoyArgentina()
   const [d, setD] = useState({
     rubro_id: '', subrubro_id: subrubros[0]?.id ?? '', nombre: '',
     origen: 'monto', monto_base: '', moneda: 'ARS', fecha_base: hoy,

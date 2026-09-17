@@ -12,13 +12,7 @@ export const entero = (v) =>
 export const plata = (v) =>
   v === null || v === undefined || v === '' ? '—' : '$ ' + AR(2).format(Number(v))
 
-export const fecha = (v) => (v ? String(v).slice(0, 10) : '—')
-
-export const fechaBreve = (v) => {
-  if (!v) return '—'
-  const [anio, mes, dia] = String(v).slice(0, 10).split('-')
-  return `${dia}/${mes}/${anio.slice(-2)}`
-}
+export { fechaArgentina as fecha, fechaArgentina as fechaBreve, fechaHoraArgentina as fechaHora } from './fechas.js'
 
 /** Como `num` pero sin ceros de relleno: 1,0000 -> 1 ; 14,4000 -> 14,4 */
 export const numCorto = (v, dec = 4) => {

@@ -1,4 +1,5 @@
 """Edicion atomica del proyecto, con revision para evitar pisar otra sesion."""
+from ..fechas import hoy_argentina
 from datetime import date
 from typing import Literal
 from uuid import UUID, uuid4
@@ -50,7 +51,7 @@ class Avance(Revision):
     @field_validator("fecha")
     @classmethod
     def no_futuro(cls, valor):
-        if valor > date.today():
+        if valor > hoy_argentina():
             raise ValueError("El avance real no puede registrarse en una fecha futura.")
         return valor
 
@@ -96,7 +97,7 @@ def _leer(cur, obra_id):
         a.fecha AS avance_fecha,a.avance_pct
         FROM dbo.proyecto_tarea t OUTER APPLY (
           SELECT TOP 1 fecha,avance_pct FROM dbo.proyecto_avance a
-          WHERE a.obra_id=t.obra_id AND a.tarea_id=t.id AND a.fecha<=CAST(GETDATE() AS date)
+          WHERE a.obra_id=t.obra_id AND a.tarea_id=t.id AND a.fecha<=CAST(SYSUTCDATETIME() AT TIME ZONE 'UTC' AT TIME ZONE 'Argentina Standard Time' AS date)
           ORDER BY fecha DESC) a
         WHERE t.obra_id=%s ORDER BY t.orden,t.nombre,t.id""", (str(obra_id),))
     tareas = cur.fetchall()

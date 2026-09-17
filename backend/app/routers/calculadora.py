@@ -6,6 +6,7 @@ la biblioteca (material.obra_id IS NULL) mas lo suyo (obra_id = la obra),
 con los campos que edito pisados por obra_material / obra_coeficiente,
 y sin lo que marco como oculto.
 """
+from ..fechas import hoy_argentina
 import datetime as dt
 import uuid
 
@@ -254,7 +255,7 @@ def cargar_precio(obra_id: str, p: PrecioNuevo):
            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
         (obra_id, p.material_id, p.proveedor_id, p.moneda, p.importe,
          1 if p.iva_incluido else 0, p.alicuota_iva,
-         p.vigente_desde or dt.date.today(), p.fuente))
+         p.vigente_desde or hoy_argentina(), p.fuente))
     return {"ok": True}
 
 

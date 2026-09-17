@@ -1,3 +1,4 @@
+import { hoyArgentina } from '../fechas'
 import { useState } from 'react'
 import { num, fecha as fmtFecha } from '../formato'
 
@@ -48,7 +49,7 @@ export default function Gantt({ tareas, rubros, escala, alCambiarEscala, alMover
   const px = PX_POR_DIA[escala]
   const total = Math.max(1, dias(desde, hasta)) + 1
   const ancho = Math.max(320, total * px)
-  const hoy = new Date().toISOString().slice(0, 10)
+  const hoy = hoyArgentina()
 
   return (
     <div className="ob-gantt">

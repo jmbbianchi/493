@@ -1,14 +1,12 @@
 import { useMemo, useState } from 'react'
 import { fechaBreve as fmtFecha, num } from '../formato'
+import { hoyArgentina } from '../fechas'
 
 const DIA = 86400000
 const instante = (f) => Date.parse(`${f}T00:00:00Z`)
 const iso = (t) => new Date(t).toISOString().slice(0, 10)
 const dias = (a, b) => Math.round((instante(b) - instante(a)) / DIA)
-export const hoyLocal = () => {
-  const f = new Date()
-  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`
-}
+export const hoyLocal = hoyArgentina
 
 export default function CronogramaProyecto({ datos, busqueda, agrupar, escala, editable, alEditar, alNueva, alRubro, alAvance }) {
   const [cerrados, setCerrados] = useState(new Set())
@@ -71,7 +69,7 @@ export default function CronogramaProyecto({ datos, busqueda, agrupar, escala, e
       <thead><tr><th scope="col" className="pr-nombre">Tarea / rubro</th><th scope="col" className="pr-responsable">Responsable</th>
         <th scope="col" className="pr-fecha">Inicio</th><th scope="col" className="pr-fecha">Fin</th><th scope="col" className="pr-porcentaje">Avance</th>
         <th scope="col" className="pr-tiempo"><span className="sr-only">Gantt</span><div className="pr-eje">
-          {marcas.map((m) => <span key={m.fecha} style={{ left: m.left }}>{new Date(instante(m.fecha)).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>)}
+          {marcas.map((m) => <span key={m.fecha} style={{ left: m.left }}>{fmtFecha(m.fecha)}</span>)}
         </div></th></tr></thead>
       <tbody>{filas.map((t) => {
         const agrupador = ['rubro', 'grupo', 'responsable'].includes(t.clase)

@@ -1,3 +1,4 @@
+import { hoyArgentina, mesArgentina } from '../fechas'
 import { useEffect, useMemo, useState } from 'react'
 import * as api from '../api'
 import { agruparSerie, fechaCotizacion, formatoValor, ipcAcumulado } from '../cotizaciones'
@@ -5,7 +6,7 @@ import GraficoCotizaciones from '../componentes/GraficoCotizaciones'
 import '../styles/cotizaciones.css'
 
 export default function Cotizaciones() {
-  const hoy=new Date().toLocaleDateString('en-CA')
+  const hoy=hoyArgentina()
   const [desde,setDesde]=useState(hoy.slice(0,4)+'-01-01'),[hasta,setHasta]=useState(hoy)
   const [seleccion,setSeleccion]=useState(['USD_OFICIAL_VENTA','USD_OFICIAL_COMPRA'])
   const [paso,setPaso]=useState('dia'),[datos,setDatos]=useState(null),[error,setError]=useState(''),[pagina,setPagina]=useState(0),[revision,setRevision]=useState(0)
@@ -36,15 +37,15 @@ export default function Cotizaciones() {
     {!valido ? <p role="alert">Indicá ambas fechas; Desde no puede ser posterior a Hasta.</p> : error ? <p role="alert">{error} <button className="ob-btn" onClick={()=>setRevision(n=>n+1)}>Reintentar</button></p> : !datos ? <p role="status">Cargando cotizaciones del período…</p> : <>
       <fieldset className="ct-variables"><legend>Variables · elegí una o varias</legend>{datos.series.map(s=><label key={s.codigo}><input type="checkbox" checked={seleccion.includes(s.codigo)} onChange={()=>alternar(s.codigo)}/>{s.nombre}</label>)}</fieldset>
       <div className="ct-resumen">{series.map(s=>{const ultimo=s.valores.at(-1);return <div key={s.codigo} title={`${ultimo ? fechaCotizacion(ultimo.fecha) : 'Sin datos en este período'} · ${s.fuente}`}><span>{s.nombre}</span><strong>{ultimo ? formatoValor(ultimo.valor,s.unidad) : 'Sin datos'}</strong></div>})}
-        <div className="ct-ipc" title="Último cierre mensual disponible dentro del período seleccionado"><span>IPC · último cierre</span><strong>{cierres.length ? `${cierres.at(-1).fecha.slice(0,7)} · ${formatoValor(cierres.at(-1).valor,'%')}` : 'Sin datos'}</strong></div>
-        <div className="ct-ipc" title={`${acumulado.meses} meses disponibles${acumulado.ultimo ? ` · hasta ${acumulado.ultimo.slice(0,7)}` : ''}`}><span>IPC acumulado · período</span><strong>{ipcTexto(acumulado)}</strong></div>
-        <div className="ct-ipc" title={anual.ultimo ? `Enero a ${anual.ultimo.slice(0,7)}` : 'Sin cierre disponible'}><span>IPC acumulado · {hasta.slice(0,4)}</span><strong>{ipcTexto(anual)}</strong></div>
+        <div className="ct-ipc" title="Último cierre mensual disponible dentro del período seleccionado"><span>IPC · último cierre</span><strong>{cierres.length ? `${mesArgentina(cierres.at(-1).fecha)} · ${formatoValor(cierres.at(-1).valor,'%')}` : 'Sin datos'}</strong></div>
+        <div className="ct-ipc" title={`${acumulado.meses} meses disponibles${acumulado.ultimo ? ` · hasta ${mesArgentina(acumulado.ultimo)}` : ''}`}><span>IPC acumulado · período</span><strong>{ipcTexto(acumulado)}</strong></div>
+        <div className="ct-ipc" title={anual.ultimo ? `Enero a ${mesArgentina(anual.ultimo)}` : 'Sin cierre disponible'}><span>IPC acumulado · {hasta.slice(0,4)}</span><strong>{ipcTexto(anual)}</strong></div>
       </div>
       <GraficoCotizaciones series={series} paso={paso}/>
       <div className="ct-tabla-titulo"><h3>Detalle del período</h3><small>{tabla.length} intervalos · los importes se muestran con dos decimales</small></div>
       <div className="ob-tablewrap"><table className="ob-table"><thead><tr><th>{paso==='dia' ? 'Fecha' : 'Inicio del intervalo'}</th>{series.map(s=><th className="ob-num" key={s.codigo}>{s.nombre}</th>)}</tr></thead><tbody>{tabla.slice(pagina*100,(pagina+1)*100).map(f=><tr key={f.fecha}><td>{fechaCotizacion(f.fecha)}</td>{series.map(s=><td className="ob-num" key={s.codigo} title={f.valores[s.codigo] ? 'Dato del '+fechaCotizacion(f.valores[s.codigo].fechaDato) : 'Sin dato en este intervalo'}>{formatoValor(f.valores[s.codigo]?.valor,s.unidad)}</td>)}</tr>)}{!tabla.length && <tr><td colSpan={series.length+1}>{series.length ? 'Sin datos para las variables y el período elegidos.' : 'Seleccioná al menos una variable.'}</td></tr>}</tbody></table></div>
       {tabla.length>100 && <div className="ct-paginacion"><button className="ob-btn" disabled={!pagina} onClick={()=>setPagina(p=>p-1)}>Anterior</button><span>Página {pagina+1} de {Math.ceil(tabla.length/100)}</span><button className="ob-btn" disabled={(pagina+1)*100>=tabla.length} onClick={()=>setPagina(p=>p+1)}>Siguiente</button></div>}
-      <details className="ct-cierres"><summary>Cierres mensuales de IPC y acumulado</summary><p>El acumulado compone las variaciones mensuales: (1 + IPC₁) × (1 + IPC₂) … − 1. Los meses sin publicación no se toman como 0 %.</p><div className="ob-tablewrap"><table className="ob-table"><thead><tr><th>Mes de referencia</th><th className="ob-num">Cierre mensual</th><th className="ob-num">Acumulado del período</th></tr></thead><tbody>{cierres.map((v,i)=><tr key={v.fecha}><td>{v.fecha.slice(0,7)}</td><td className="ob-num">{formatoValor(v.valor,'%')}</td><td className="ob-num">{ipcTexto(ipcAcumulado(cierres.slice(0,i+1),desde.slice(0,7)+'-01'))}</td></tr>)}</tbody></table></div></details>
+      <details className="ct-cierres"><summary>Cierres mensuales de IPC y acumulado</summary><p>El acumulado compone las variaciones mensuales: (1 + IPC₁) × (1 + IPC₂) … − 1. Los meses sin publicación no se toman como 0 %.</p><div className="ob-tablewrap"><table className="ob-table"><thead><tr><th>Mes de referencia</th><th className="ob-num">Cierre mensual</th><th className="ob-num">Acumulado del período</th></tr></thead><tbody>{cierres.map((v,i)=><tr key={v.fecha}><td>{mesArgentina(v.fecha)}</td><td className="ob-num">{formatoValor(v.valor,'%')}</td><td className="ob-num">{ipcTexto(ipcAcumulado(cierres.slice(0,i+1),desde.slice(0,7)+'-01'))}</td></tr>)}</tbody></table></div></details>
       <p className="ct-ayuda">Compra y venta: <a href="https://argentinadatos.com/docs/operations/get-cotizaciones-dolares" target="_blank" rel="noreferrer">ArgentinaDatos / DolarAPI</a>. Promedio minorista vendedor, UVA e IPC: <a href="https://www.bcra.gob.ar/principales-variables/" target="_blank" rel="noreferrer">BCRA</a>. Los valores del dólar expresan ARS por U$D 1. Las fechas de IPC identifican el mes de referencia, no su fecha de publicación. El nivel de IPC es una serie encadenada de base arbitraria.</p>
     </>}
   </section>

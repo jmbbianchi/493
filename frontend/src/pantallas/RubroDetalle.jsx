@@ -1,3 +1,4 @@
+import { hoyArgentina } from '../fechas'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useOutletContext, Link } from 'react-router-dom'
 import * as api from '../api'
@@ -152,7 +153,7 @@ function Numero({ rotulo, valor, pie }) {
 
 /** El alta: el presupuesto y su plan en un solo paso, como se habla. */
 function Alta({ obra, rubroId, alCrear }) {
-  const hoy = new Date().toISOString().slice(0, 10)
+  const hoy = hoyArgentina()
   const [d, setD] = useState({
     nombre: '', tipo: 'materiales', monto_base: '', moneda: 'ARS',
     fecha_base: hoy, notas: '',

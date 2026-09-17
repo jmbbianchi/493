@@ -2,7 +2,7 @@ import { semana } from './calendarioPagos.js'
 import { num } from './formato.js'
 
 export const periodo = (fecha,paso) => paso==='anio' ? fecha.slice(0,4)+'-01-01' : paso==='mes' ? fecha.slice(0,7)+'-01' : paso==='semana' ? semana(fecha) : fecha.slice(0,10)
-export const fechaCotizacion = f => f ? f.slice(0,10).split('-').reverse().join('/') : '—'
+export { fechaArgentina as fechaCotizacion } from './fechas.js'
 export function formatoValor(v,unidad) {
   if(v==null)return '—'
   return unidad==='ARS' || unidad==='USD' ? `${unidad==='USD' ? 'U$D' : 'ARS'} ${num(v,2)}` : `${num(v,2)}${unidad==='%' ? ' %' : ''}`

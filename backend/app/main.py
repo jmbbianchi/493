@@ -9,6 +9,7 @@ PROHIBIDO en este archivo (reglas de la auditoria de jun-2026):
 
 El contenedor tiene que poder dormirse. Si no se duerme, factura.
 """
+from .fechas import hoy_argentina
 import os
 from datetime import date
 
@@ -83,4 +84,4 @@ def historia_indice(codigo: str, hasta: date):
 
 @app.get('/api/indices/dolar-calendario')
 def dolar_calendario():
-    return db.query("SELECT fecha,valor FROM dbo.indice_valor WHERE codigo='USD_MINORISTA' AND valor>0 AND fecha<=%s ORDER BY fecha", (date.today(),))
+    return db.query("SELECT fecha,valor FROM dbo.indice_valor WHERE codigo='USD_MINORISTA' AND valor>0 AND fecha<=%s ORDER BY fecha", (hoy_argentina(),))

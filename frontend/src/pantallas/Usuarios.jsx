@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 import * as api from '../api'
 import Aviso from '../componentes/Aviso'
 import Modal from '../componentes/Modal'
-import { fecha as fmtFecha } from '../formato'
+import { fechaHora as fmtFecha } from '../formato'
 
 /**
  * Quién entra y a qué obra. Es la segunda capa, y la maneja el dueño.

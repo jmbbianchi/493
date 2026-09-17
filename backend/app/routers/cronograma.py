@@ -26,6 +26,7 @@ usan materiales de bulto grande.
 Si ninguna tarea del rubro tiene costo conocido, todas pesan igual y la
 respuesta lo dice: un promedio simple es una hipotesis, no un hecho.
 """
+from ..fechas import hoy_argentina
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -276,7 +277,7 @@ def cargar_avance(obra_id: str, computo_id: str, a: Avance):
                     (computo_id, obra_id))
     if not fila:
         raise HTTPException(404, "No existe esa tarea en esta obra.")
-    cuando = a.fecha or date.today()
+    cuando = a.fecha or hoy_argentina()
     db.execute(
         """MERGE dbo.avance_tarea AS destino
            USING (SELECT %s AS computo_id, %s AS fecha) AS origen

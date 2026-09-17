@@ -1,3 +1,4 @@
+import { hoyArgentina } from '../fechas'
 import SelectorCategoria from '../componentes/SelectorCategoria'
 import { Fragment, useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
@@ -214,7 +215,7 @@ export default function Pagar() {
 }
 
 function Formulario({ obra, destinos, alGuardar }) {
-  const hoy = new Date().toISOString().slice(0, 10)
+  const hoy = hoyArgentina()
   const [rubroId, setRubroId] = useState('')
   const [subrubroId, setSubrubroId] = useState('')
   const [presupuestoId, setPresupuestoId] = useState('')

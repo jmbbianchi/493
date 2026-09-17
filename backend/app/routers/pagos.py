@@ -19,6 +19,7 @@ conexiones nuevas contra una base que puede estar dormida: db.py abre y
 cierra por operacion a proposito, asi que cada request extra son 40
 segundos de riesgo. Una sola llamada, todo lo que la pantalla necesita.
 """
+from ..fechas import hoy_argentina
 import uuid
 from datetime import date
 from decimal import Decimal
@@ -62,7 +63,7 @@ class Anulacion(BaseModel):
 
 @router.post("/pagos", status_code=201)
 def registrar(obra_id: str, p: PagoNuevo):
-    if p.avances and (not p.presupuesto_id or p.proyecto_version is None or p.fecha > date.today()):
+    if p.avances and (not p.presupuesto_id or p.proyecto_version is None or p.fecha > hoy_argentina()):
         raise HTTPException(422, "El avance requiere presupuesto, versión del proyecto y fecha no futura.")
     if len({a.tarea_id for a in p.avances}) != len(p.avances):
         raise HTTPException(422, "No repitas una tarea.")
