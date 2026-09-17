@@ -27,9 +27,9 @@ def programar(obra_id: str, cuota_id: UUID, datos: Programacion):
             raise HTTPException(404, 'No existe la obra.')
         cur.execute('''SELECT q.id FROM dbo.cuota q JOIN dbo.presupuesto p ON p.id=q.presupuesto_id
             WHERE q.id=%s AND p.obra_id=%s AND q.estado<>'anulada'
-            AND p.estado='confirmado' AND p.elegido=1''', (str(cuota_id), obra_id))
+            AND p.estado='confirmado' ''', (str(cuota_id), obra_id))
         if not cur.fetchone():
-            raise HTTPException(404, 'La cuota no pertenece a un presupuesto elegido de esta obra.')
+            raise HTTPException(404, 'La cuota no pertenece a un presupuesto confirmado de esta obra.')
         cur.execute('SELECT version FROM dbo.cuota_calendario WHERE cuota_id=%s', (str(cuota_id),))
         anterior = cur.fetchone()
         version = anterior['version'] if anterior else 0

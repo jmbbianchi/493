@@ -353,7 +353,7 @@ function Formulario({ obra, destinos, alGuardar }) {
           <option value="">Pago suelto — sin presupuesto</option>
           {candidatos.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.nombre} · queda {p.saldo == null ? 'Sin cotización' : `${p.moneda} ${num(p.saldo,2)}`}
+              {p.nombre}{p.fecha_base ? ` · ${fecha(p.fecha_base)}` : ''} · pactado {p.moneda} {num(p.nominal,2)} · queda {p.saldo == null ? 'Sin cotización' : `${p.moneda} ${num(p.saldo,2)}`}
             </option>
           ))}
         </select>
@@ -369,7 +369,7 @@ function Formulario({ obra, destinos, alGuardar }) {
         )}
         {!elegido && rubroId && candidatos.length === 0 && (
           <span className="ob-campo__pie">
-            Este rubro no tiene ningún presupuesto en uso. El pago entra igual,
+            Este rubro no tiene ningún presupuesto confirmado. El pago entra igual,
             como suelto.
           </span>
         )}

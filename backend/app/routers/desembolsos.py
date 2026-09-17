@@ -122,9 +122,7 @@ def guardar(obra_id: str, presupuesto_id: str, datos: Acuerdo):
             cur.execute("SELECT tarea_id FROM dbo.proyecto_presupuesto_tarea WHERE obra_id=%s AND presupuesto_id=%s AND tarea_id=%s",(obra_id,presupuesto_id,tarea_id))
             if not cur.fetchone():
                 cur.execute("INSERT dbo.proyecto_presupuesto_tarea VALUES (%s,%s,%s)",(obra_id,presupuesto_id,tarea_id))
-        if datos.elegido:
-            cur.execute("UPDATE dbo.presupuesto SET elegido=0 WHERE obra_id=%s AND rubro_id=%s AND subrubro_id=%s AND id<>%s",(obra_id,rubro_id,subrubro_id,presupuesto_id))
-        cur.execute("UPDATE dbo.presupuesto SET nombre=%s,monto_base=%s,elegido=%s,rubro_id=%s,subrubro_id=%s,estado='confirmado' WHERE id=%s",(datos.nombre,datos.monto_base,datos.elegido,rubro_id,subrubro_id,presupuesto_id))
+        cur.execute("UPDATE dbo.presupuesto SET nombre=%s,monto_base=%s,elegido=%s,rubro_id=%s,subrubro_id=%s,estado='confirmado' WHERE id=%s",(datos.nombre,datos.monto_base,True,rubro_id,subrubro_id,presupuesto_id))
         if (rubro_id,subrubro_id)!=(p['rubro_id'],p['subrubro_id']):
             cur.execute('UPDATE dbo.pago SET rubro_id=%s,subrubro_id=%s WHERE obra_id=%s AND presupuesto_id=%s', (rubro_id,subrubro_id,obra_id,presupuesto_id))
         max_orden = max([c["orden"] for c in anteriores] or [0])

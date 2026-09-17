@@ -336,7 +336,7 @@ def curvas(obra_id: str, escala: str = "semana"):
 
     comprometido = db.query(
         """SELECT ISNULL(SUM(monto_base), 0) AS total FROM dbo.presupuesto
-           WHERE obra_id = %s AND estado = 'confirmado' AND elegido = 1""",
+           WHERE obra_id = %s AND estado = 'confirmado'""",
         (obra_id,))[0]["total"]
     comprometido = Decimal(str(comprometido))
 

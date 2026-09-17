@@ -10,14 +10,22 @@ class PagosVinculadosTests(unittest.TestCase):
     def datos(self, **extra):
         return PagoNuevo(rubro_id=1, presupuesto_id="p", fecha=date.today(), monto=100, **extra)
 
-    def test_no_elegido_no_inserta_pago(self):
+    def test_borrador_no_inserta_pago(self):
         with patch("app.routers.pagos.db.cursor") as db:
             cur = db.return_value.__enter__.return_value
-            cur.fetchone.return_value = dict(rubro_id=1, subrubro_id=2, estado="confirmado", elegido=False)
+            cur.fetchone.return_value = dict(rubro_id=1, subrubro_id=2, estado="borrador", elegido=False)
             with self.assertRaises(HTTPException) as e:
                 registrar("obra", self.datos())
             self.assertEqual(e.exception.status_code, 409)
             self.assertFalse(any("INSERT INTO dbo.pago" in c.args[0] for c in cur.execute.call_args_list))
+
+    def test_confirmado_no_elegido_admite_pago(self):
+        with patch('app.routers.pagos.db.cursor') as db, patch('app.routers.pagos._saldo', return_value=None):
+            cur = db.return_value.__enter__.return_value
+            cur.fetchone.return_value = dict(rubro_id=1, subrubro_id=2, estado='confirmado', elegido=False)
+            resultado = registrar('obra', self.datos())
+            self.assertTrue(resultado['id'])
+            self.assertTrue(any('INSERT INTO dbo.pago' in c.args[0] for c in cur.execute.call_args_list))
 
     def test_cuota_ajena_no_inserta_pago(self):
         with patch("app.routers.pagos.db.cursor") as db:

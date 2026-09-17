@@ -112,7 +112,7 @@ export default function Curvas({ datos, escala, alCambiarEscala }) {
             <span><i className="ob-curvas__marca ob-curvas__marca--plata" /> Pagado
               {datos.hay_comprometido
                 ? ` · sobre ${plata(datos.comprometido)} comprometido`
-                : ' · sin presupuestos elegidos, no hay % contra qué medirlo'}</span>
+                : ' · sin presupuestos confirmados, no hay % contra qué medirlo'}</span>
             {!datos.ponderado && (
               <span className="ob-curvas__aviso">
                 El avance es un promedio simple: ninguna tarea tiene costo cargado

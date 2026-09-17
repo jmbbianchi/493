@@ -5,6 +5,7 @@ import * as api from '../api'
 import Aviso from '../componentes/Aviso'
 import ItemsPresupuesto from '../componentes/ItemsPresupuesto'
 import { plata, num, fecha } from '../formato'
+import { resumenAprobados } from '../presupuestosResumen'
 
 /**
  * La comparativa: un renglón por rubro y tipo con todas sus
@@ -16,8 +17,7 @@ import { plata, num, fecha } from '../formato'
  * más barata — es el número que dice si valió la pena pedir tres
  * presupuestos.
  *
- * Sólo la elegida suma en la obra. Si sumaran todas, tener tres
- * cotizaciones del mismo trabajo mostraría el triple de lo que va a salir.
+ * Cada cotización confirmada suma como un acuerdo independiente.
  */
 export default function Presupuestos() {
   const { obra, version, tocado } = useOutletContext()
@@ -48,19 +48,14 @@ export default function Presupuestos() {
   }
   useEffect(() => { setDatos(null); cargar() }, [obra.id, version])
 
-  const elegir = async (id) => {
-    try {
-      await api.post(`/api/obras/${obra.id}/presupuestos/${id}/elegir`, {})
-      await cargar(); tocado()
-    } catch (e) { setError(e) }
-  }
-
   if (error) return <Aviso error={error} alCerrar={() => setError(null)} />
   if (!datos) return <p className="ob-cargando">Cargando…</p>
 
   const grupos = datos.grupos
-  const totalElegido = ['ARS','USD'].map(m=>`${m} ${num(grupos.filter(g=>g.elegido_moneda===m).reduce((a,g)=>a+(g.elegido_monto || 0),0),2)}`).join(' · ')
-  const sinElegir = grupos.filter((g) => !g.elegido_id).length
+  const resumen = (cotizaciones, campo) => resumenAprobados(cotizaciones, saldos, campo)
+    .map(t => `${t.moneda} ${t.valor == null ? 'Sin cotización' : num(t.valor,2)}`).join(' · ') || '—'
+  const totalElegido = resumen(grupos.flatMap(g => g.cotizaciones))
+  const sinElegir = grupos.filter(g => !g.cotizaciones.some(c => c.estado === 'confirmado')).length
   const importeSaldo = (id, campo) => {
     const saldo = saldos[id]
     if (!saldo) return '—'
@@ -74,7 +69,7 @@ export default function Presupuestos() {
         <span className="ob-label">Presupuestos</span>
         <span className="ob-toolbar__meta">
           {grupos.length === 0 ? 'Ninguno cargado todavía'
-            : `${grupos.length} rubro/tipo · elegido ${totalElegido} nominal`}
+            : `${grupos.length} rubro/tipo · aprobado ${totalElegido} nominal`}
           <button className="ob-btn ob-btn--primario" onClick={() => setAlta(!alta)}
             style={{ marginLeft: 'var(--ob-gap-3)' }}>
             {alta ? 'Cancelar' : 'Cargar un presupuesto'}
@@ -89,8 +84,8 @@ export default function Presupuestos() {
 
       {sinElegir > 0 && (
         <p className="ob-nota">
-          {sinElegir} grupo(s) tienen cotizaciones pero ninguna elegida: no suman
-          a la obra hasta que marques cuál vas a usar.
+          {sinElegir} grupo(s) tienen cotizaciones sin confirmar. Confirmá cada
+          presupuesto aceptado para incluirlo en la obra y asignarle pagos.
         </p>
       )}
 
@@ -104,8 +99,8 @@ export default function Presupuestos() {
           </p>
           <p>
             Cargá varias cotizaciones del mismo rubro y tipo y la app te
-            muestra cuánto se separan. Después marcás cuál usás, y sólo ésa
-            suma.
+            muestra cuánto se separan. Cada presupuesto que confirmás suma
+            como un compromiso independiente.
           </p>
         </div>
       )}
@@ -140,18 +135,18 @@ export default function Presupuestos() {
                   </b>
                 </span>
                 <span className="ob-comp__dato">
-                  <b className="ob-label">Elegido</b>
-                  <b className={`ob-num${g.elegido_monto == null ? ' ob-table__sec' : ''}`}>
-                    {g.elegido_monto == null ? 'ninguno' : `${g.elegido_moneda} ${num(g.elegido_monto,2)}`}
+                  <b className="ob-label">Aprobados</b>
+                  <b className="ob-num">
+                    {resumen(g.cotizaciones)}
                   </b>
                 </span>
-                <span className="ob-comp__dato" title="Pagos aplicados al presupuesto elegido, en su moneda">
+                <span className="ob-comp__dato" title="Pagos de todos los presupuestos confirmados, por moneda">
                   <b className="ob-label">Pagado</b>
-                  <b className="ob-num">{importeSaldo(g.elegido_id, 'pagado')}</b>
+                  <b className="ob-num">{resumen(g.cotizaciones, 'pagado')}</b>
                 </span>
-                <span className="ob-comp__dato" title="Saldo del presupuesto elegido: mismo valor que en Gastos y compras">
+                <span className="ob-comp__dato" title="Saldo de todos los presupuestos confirmados">
                   <b className="ob-label">Saldo pendiente</b>
-                  <b className="ob-num">{importeSaldo(g.elegido_id, 'saldo')}</b>
+                  <b className="ob-num">{resumen(g.cotizaciones, 'saldo')}</b>
                 </span>
               </span>
             </button>
@@ -174,8 +169,8 @@ export default function Presupuestos() {
                 </thead>
                 <tbody>
                   {g.cotizaciones.map((c) => (
-                    <tr key={c.id} className={c.elegido ? 'ob-comp__elegida' : undefined}>
-                      <td style={{ width: '2rem' }}>{c.elegido ? '★' : ''}</td>
+                    <tr key={c.id} className={c.estado === 'confirmado' ? 'ob-comp__elegida' : undefined}>
+                      <td style={{ width: '2rem' }}>{c.estado === 'confirmado' ? '✓' : ''}</td>
                       <td>
                         <Link to={`/obra/${obra.id}/rubros/${g.rubro_id}/presupuestos/${c.id}`}>
                           {c.nombre}
@@ -202,11 +197,7 @@ export default function Presupuestos() {
                           c.estado === 'confirmado' ? 'ok' : 'mudo'}`}>{c.estado}</span>
                       </td>
                       <td style={{ width: '7rem' }}>
-                        {c.estado === 'confirmado' && !c.elegido && (
-                          <button className="ob-btn" onClick={() => elegir(c.id)}>
-                            Usar ésta
-                          </button>
-                        )}
+                        <Link className="ob-btn" to={`/obra/${obra.id}/rubros/${g.rubro_id}/presupuestos/${c.id}`}>Detalle</Link>
                       </td>
                     </tr>
                   ))}

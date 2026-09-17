@@ -61,13 +61,6 @@ export default function Presupuesto() {
   const t = d.total
   const borrador = p.estado === 'borrador'
 
-  const elegir = async () => {
-    try {
-      await api.post(`/api/obras/${obra.id}/presupuestos/${presupuestoId}/elegir`, {})
-      cargar()
-    } catch (e) { setError(e) }
-  }
-
   const abrirEdicion = async () => {
     try {
       const acuerdo = await api.get(`/api/obras/${obra.id}/presupuestos/${presupuestoId}/acuerdo`)
@@ -86,13 +79,10 @@ export default function Presupuesto() {
         <span className="ob-label" style={{ marginLeft: 'var(--ob-gap-3)' }}>{p.nombre}</span>
         <span className={`ob-chip ob-chip--${borrador ? 'mudo' : 'ok'}`}
           style={{ marginLeft: 'var(--ob-gap-2)' }}>{p.estado}</span>
-        {p.elegido ? (
+        {p.estado === 'confirmado' ? (
           <span className="ob-chip ob-chip--ok" style={{ marginLeft: 'var(--ob-gap-2)' }}>
-            ★ en uso
+            Aprobado para pagos
           </span>
-        ) : p.estado === 'confirmado' ? (
-          <button className="ob-btn" onClick={elegir}
-            style={{ marginLeft: 'var(--ob-gap-2)' }}>Usar ésta</button>
         ) : null}
         <span className="ob-toolbar__meta">
           Base {fecha(p.fecha_base)} · {p.moneda}
@@ -336,7 +326,7 @@ function EditorAcuerdo({ datos: inicial, obraId, presupuestoId, alCerrar, alGuar
     try {
       const cuotas = totalPendiente ? repartirAcuerdo(d.cuotas,nuevoTotal) : d.cuotas
       await api.put(`/api/obras/${obraId}/presupuestos/${presupuestoId}/acuerdo`, {
-        huella: d.huella, nombre: d.nombre, monto_base: totalAcuerdo(cuotas), elegido: Boolean(d.elegido),
+        huella: d.huella, nombre: d.nombre, monto_base: totalAcuerdo(cuotas), elegido: true,
         rubro_id: Number(d.rubro_id), subrubro_id: Number(d.subrubro_id),
         base_ipc: d.base_ipc, tarea_id: d.tarea_id || null, cuotas: cuotas.map((c) => ({
           id: c.id, tipo: c.tipo, descripcion: c.descripcion, fecha_prevista: c.fecha_prevista || null,
@@ -354,7 +344,7 @@ function EditorAcuerdo({ datos: inicial, obraId, presupuestoId, alCerrar, alGuar
     <label className="ob-campo"><span className="ob-label">Nuevo total negociado · {d.moneda}</span><input className="ob-input ob-num" type="number" min="0.01" step="0.01" value={nuevoTotal} onChange={e=>{setNuevoTotal(e.target.value);setTotalPendiente(true)}} /></label>
     <button className="ob-btn" onClick={()=>{try{setD({...d,cuotas:repartirAcuerdo(d.cuotas,nuevoTotal)});setTotalPendiente(false);setError(null)}catch(e){setError(e)}}}>Aplicar total a los desembolsos</button>
     <p className="ob-nota">Se reparte entre los desembolsos sin pagos. También podés editar sus importes individualmente. Total a guardar: <strong>{d.moneda} {num(totalAcuerdo(d.cuotas),2)}</strong>.</p>
-    <label className="ob-campo"><span className="ob-label">Presupuesto elegido</span><input type="checkbox" checked={Boolean(d.elegido)} onChange={(e) => setD({ ...d, elegido: e.target.checked })} /> Usar este acuerdo para la obra</label>
+    <p>Este acuerdo confirmado se incluye en la obra y admite pagos independientes.</p>
     <label className="ob-campo"><span className="ob-label">Base para el ajuste IPC</span><select className="ob-input" value={d.base_ipc} onChange={(e) => setD({ ...d, base_ipc: e.target.value })}><option value="primera_cuota">Inicio de la primera cuota</option><option value="cotizacion">Fecha de cotización</option></select></label>
     <label className="ob-campo"><span className="ob-label">Tarea vinculada</span><select className="ob-input" value={d.tarea_id || ''} onChange={(e) => setD({ ...d, tarea_id: e.target.value || null })}><option value="">Sin tarea vinculada</option>{d.proyecto.tareas.filter((t) => t.tipo === 'tarea').map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}</select></label>
     <div className="ob-tablewrap"><table className="ob-table"><thead><tr><th>Concepto</th><th>Fecha estimada (opcional)</th><th>Monto pactado</th><th>IPC</th></tr></thead><tbody>{d.cuotas.map((c, i) => <tr key={c.id || i}><td>{c.descripcion}{c.con_pagos && ' · con pagos'}</td><td><input className="ob-input" disabled={c.con_pagos} type="date" value={c.fecha_prevista} onChange={(e) => cambiar(i, 'fecha_prevista', e.target.value)} /></td><td><input className="ob-input ob-num" disabled={c.con_pagos || totalPendiente} aria-label={`Monto ${c.descripcion}`} value={c.monto_nominal} onChange={(e) => cambiar(i, 'monto_nominal', e.target.value)} /></td><td><input type="checkbox" disabled={c.con_pagos} checked={Boolean(c.indexa)} onChange={(e) => cambiar(i, 'indexa', e.target.checked)} /></td></tr>)}</tbody></table></div>

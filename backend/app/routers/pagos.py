@@ -77,8 +77,8 @@ def registrar(obra_id: str, p: PagoNuevo):
             presupuesto = cur.fetchone()
             if not presupuesto:
                 raise HTTPException(404, "Ese presupuesto no es de esta obra.")
-            if presupuesto["estado"] != "confirmado" or not presupuesto["elegido"]:
-                raise HTTPException(409, "Elegí un presupuesto confirmado para asignarle pagos.")
+            if presupuesto["estado"] != "confirmado":
+                raise HTTPException(409, "Confirmá el presupuesto para asignarle pagos.")
             if presupuesto["rubro_id"] != p.rubro_id:
                 raise HTTPException(422, "El presupuesto es de otro rubro.")
             p.subrubro_id = presupuesto["subrubro_id"]
@@ -224,9 +224,7 @@ def destinos(obra_id: str):
     subrubros = db.query(
         "SELECT id, codigo, nombre, orden FROM dbo.subrubro ORDER BY orden")
 
-    # Solo los ELEGIDOS. Ofrecer las cotizaciones descartadas invita a
-    # imputarle un pago a un presupuesto que no se va a usar, y despues no
-    # hay forma de darse cuenta mirando la tabla.
+    # Cada confirmado admite pagos propios; los borradores no son compromisos.
     presupuestos = db.query(
         """SELECT p.id, p.rubro_id, r.nombre AS rubro,
                   p.subrubro_id, s.nombre AS subrubro,
@@ -234,7 +232,7 @@ def destinos(obra_id: str):
            FROM dbo.presupuesto p
            JOIN dbo.rubro r ON r.id = p.rubro_id
            JOIN dbo.subrubro s ON s.id = p.subrubro_id
-           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
+           WHERE p.obra_id = %s AND p.estado = 'confirmado'
            ORDER BY r.orden, s.orden""", (obra_id,))
 
     if not presupuestos:
@@ -246,7 +244,7 @@ def destinos(obra_id: str):
                   c.fecha_prevista, c.fecha_base_ipc, c.monto_nominal, c.indexa, c.estado
            FROM dbo.v_cuota_programada c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
-           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
+           WHERE p.obra_id = %s AND p.estado = 'confirmado'
              AND c.estado <> 'anulada'""",
         (obra_id,))
     pagado = {str(f["presupuesto_id"]): Decimal(str(f["pagado"])) for f in db.query(
@@ -278,6 +276,7 @@ def destinos(obra_id: str):
             "subrubro_id": p["subrubro_id"],
             "subrubro": p["subrubro"],
             "nombre": p["nombre"],
+            "fecha_base": p["fecha_base"],
             "moneda": p["moneda"],
             "nominal": float(p["monto_base"]),
             "saldo_nominal": float(Decimal(str(p["monto_base"])) - ya),

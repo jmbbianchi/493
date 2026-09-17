@@ -5,7 +5,7 @@ export default function GanttPagos({ cuotas }) {
   const meses = useMemo(() => [...new Set(cuotas.map((c) => c.fecha_prevista?.slice(0, 7)).filter(Boolean))].sort(), [cuotas])
   const grupos = useMemo(() => [...new Map(cuotas.map((c) => [c.presupuesto_id, { id: c.presupuesto_id, nombre: c.presupuesto, moneda: c.moneda }])).values()], [cuotas])
   return <section className="pr-panel pr-finanzas">
-    <div className="pr-panel__titulo"><div><h2>Gantt de pagos</h2><p>Compromisos de presupuestos elegidos. Importes pactados y estimados; no representan pagos realizados.</p></div></div>
+    <div className="pr-panel__titulo"><div><h2>Gantt de pagos</h2><p>Compromisos de presupuestos confirmados. Importes pactados y estimados; no representan pagos realizados.</p></div></div>
     {!meses.length ? <p className="pr-finanzas__vacio">Elegí y confirmá un presupuesto con cuotas para ver su calendario.</p> :
       <div style={{ overflowX: 'auto' }}><table className="ob-table" style={{ minWidth: Math.max(600, meses.length * 190 + 220) }}>
         <thead><tr><th>Presupuesto</th>{meses.map((mes) => <th key={mes}>{mes.slice(5)}/{mes.slice(0, 4)}</th>)}</tr></thead>

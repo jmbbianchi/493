@@ -26,8 +26,7 @@ class AcuerdosTests(unittest.TestCase):
             pago=next(c for c in llamadas if 'UPDATE dbo.pago' in c.args[0])
             self.assertEqual(pago.args[1],(3,4,'obra','presupuesto'))
             self.assertNotIn('monto=',pago.args[0])
-            elegido=next(c for c in llamadas if 'SET elegido=0' in c.args[0])
-            self.assertEqual(elegido.args[1],('obra',3,4,'presupuesto'))
+            self.assertFalse(any('SET elegido=0' in c.args[0] for c in llamadas))
 
     def test_no_modifica_cuota_con_pago(self):
         anterior=dict(id=CID,estado='pendiente',monto_nominal=100,fecha_prevista=None,tipo='cuota',indexa=False)

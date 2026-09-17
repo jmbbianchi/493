@@ -427,20 +427,11 @@ def confirmar(obra_id: str, presupuesto_id: str):
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                 (presupuesto_id, t["id"], t["orden"], t["tipo"], t["descripcion"],
                  t["fecha_prevista"], float(monto), t["indexa"], t["indice_codigo"]))
-        # Si es la unica cotizacion confirmada de su rubro y sub-rubro queda
-        # elegida sola. Es el caso mas comun, y obligar a marcarla a mano
-        # dejaria la columna Presupuestado vacia sin que se entienda por que.
+        # Confirmar acepta este acuerdo sin reemplazar otros del mismo rubro.
         cur.execute(
             """UPDATE dbo.presupuesto
                  SET estado = 'confirmado', confirmado_en = sysutcdatetime(),
-                     elegido = CASE WHEN NOT EXISTS (
-                         SELECT 1 FROM dbo.presupuesto o
-                          WHERE o.obra_id = dbo.presupuesto.obra_id
-                            AND o.rubro_id = dbo.presupuesto.rubro_id
-                            AND o.subrubro_id = dbo.presupuesto.subrubro_id
-                            AND o.estado = 'confirmado' AND o.elegido = 1
-                            AND o.id <> dbo.presupuesto.id)
-                       THEN 1 ELSE 0 END
+                     elegido = 1
                WHERE id = %s""", (presupuesto_id,))
     return {"cuotas": len(tramos)}
 
@@ -555,7 +546,7 @@ def resumen_por_rubro(obra_id: str):
                   c.fecha_prevista, c.fecha_base_ipc, c.monto_nominal, c.indexa, c.estado
            FROM dbo.v_cuota_programada c
            JOIN dbo.presupuesto p ON p.id = c.presupuesto_id
-           WHERE p.obra_id = %s AND p.estado = 'confirmado' AND p.elegido = 1
+           WHERE p.obra_id = %s AND p.estado = 'confirmado'
              AND c.estado <> 'anulada'""",
         (obra_id,))
 
@@ -634,24 +625,12 @@ def subrubros(obra_id: str):
 
 @router.post("/presupuestos/{presupuesto_id}/elegir")
 def elegir(obra_id: str, presupuesto_id: str):
-    """Marca este presupuesto como el que se usa, y baja al anterior.
-
-    Para un mismo rubro y sub-rubro se piden varias cotizaciones y se usa
-    una. Solo la elegida suma en la columna Presupuestado: si sumaran
-    todas, tener tres cotizaciones del mismo trabajo mostraria el triple.
-    """
+    """Compatibilidad: activar uno no desactiva otros acuerdos confirmados."""
     p = _traer(obra_id, presupuesto_id)
     if p["estado"] != "confirmado":
         raise HTTPException(409, "Solo se puede elegir un presupuesto confirmado.")
 
     with db.cursor() as cur:
-        # Primero se baja la anterior: el indice unico filtrado de la base
-        # rechaza el instante en que habria dos elegidas a la vez.
-        cur.execute(
-            """UPDATE dbo.presupuesto SET elegido = 0
-               WHERE obra_id = %s AND rubro_id = %s AND subrubro_id = %s
-                 AND elegido = 1 AND id <> %s""",
-            (obra_id, p["rubro_id"], p["subrubro_id"], presupuesto_id))
         cur.execute("UPDATE dbo.presupuesto SET elegido = 1 WHERE id = %s", (presupuesto_id,))
     return {"elegido": True}
 

@@ -64,7 +64,7 @@ export default function CalendarioSemanalPagos({ obraId, superficie, destinos, p
         ['Esta semana',modelo.semanaActual,'Incluye el saldo vencido de semanas anteriores'],
         ['Próxima semana',modelo.proxima,`${fecha(sumarDias(semana(hoy),7))} al ${fecha(sumarDias(semana(hoy),13))}`],
         ['Semana siguiente',modelo.siguiente,`${fecha(sumarDias(semana(hoy),14))} al ${fecha(sumarDias(semana(hoy),20))}`],
-        ['Presupuestos aprobados',modelo.aprobado,'Total pactado de presupuestos elegidos, convertido a la cotización actual; sin proyección IPC'],
+        ['Presupuestos aprobados',modelo.aprobado,'Total pactado de todos los presupuestos confirmados, convertido a la cotización actual; sin proyección IPC'],
         ['Gasto acumulado',modelo.pagado,'Pagos realizados hasta hoy, incluidos los pagos sin presupuesto; convertidos a su cotización histórica'],
         ['Saldo pendiente',modelo.pendiente,'Todas las fechas, incluso sin programar y fuera del período visible'],
         ['Gasto / m²',Number(superficie)>0 && modelo.pagado!=null ? Math.round(modelo.pagado/Number(superficie)) : null,`Pagado / ${num(superficie || 0,2)} m² según Datos de obra`],
@@ -81,7 +81,7 @@ export default function CalendarioSemanalPagos({ obraId, superficie, destinos, p
         <tbody>{grupos.flatMap(g=>[
           <tr key={'tipo-'+g.key} className="cp-rubro"><th scope="row"><button className="cp-grupo" aria-expanded={!cerrados[g.key]} onClick={()=>setCerrados(v=>({...v,[g.key]:!v[g.key]}))}>{cerrados[g.key] ? '▸' : '▾'} {g.nombre}</button></th>{celdas(g)}</tr>,
           ...(!cerrados[g.key] ? g.hijos.map(h=><tr key={h.key}><th scope="row" className="cp-subrubro">{h.rubro}</th>{celdas(h)}</tr>) : [])
-        ])}{!grupos.length && <tr><td colSpan={15}>Todavía no hay gastos ni presupuestos elegidos.</td></tr>}</tbody>
+        ])}{!grupos.length && <tr><td colSpan={15}>Todavía no hay gastos ni presupuestos confirmados.</td></tr>}</tbody>
         <tfoot><tr><th scope="row">Restante a pagar · {moneda}</th>{[...semanas,null].map(s=><td key={s || 'total'}>{importe(sumar(modelo.registros.filter(r=>!s || r.semana===s).map(r=>r.pendiente)))}</td>)}</tr></tfoot>
       </table></div> : <div className="cp-scroll"><table className="cp-tabla cp-resumen"><thead><tr><th>Tipo / Rubro</th><th>Gasto acumulado</th><th>Saldo pendiente</th><th>Pagado + pendiente</th><th>% pagado</th></tr></thead>
         <tbody>{modelo.filas.map(f=>{
