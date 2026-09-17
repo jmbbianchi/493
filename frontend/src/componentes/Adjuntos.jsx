@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as api from '../api'
 import { subir } from '../subir'
+import { tiposDocumento } from '../documentos'
 
 /**
  * Adjuntos de algo: un pago, un presupuesto, un rubro.
@@ -12,12 +13,13 @@ import { subir } from '../subir'
  * sacaste no tiene sentido.
  */
 export default function Adjuntos({ obra, colgar, tipo = 'otro', titulo = 'Comprobantes',
-                                   provistos, alCambiar }) {
+                                   provistos, alCambiar, clasificar=false }) {
   const [docs, setDocs] = useState(provistos ?? null)
   const [subiendo, setSubiendo] = useState(false)
   const [error, setError] = useState(null)
   const camara = useRef(null)
   const archivo = useRef(null)
+  const [tipoNuevo,setTipoNuevo]=useState(colgar.pago_id ? 'recibo' : tipo)
 
   const filtro = new URLSearchParams(colgar).toString()
 
@@ -43,7 +45,7 @@ export default function Adjuntos({ obra, colgar, tipo = 'otro', titulo = 'Compro
     setSubiendo(true); setError(null)
     const errores = []
     for (const f of archivos) {
-      try { await subir(obra.id, f, { ...colgar, tipo }) }
+      try { await subir(obra.id, f, { ...colgar, tipo:clasificar ? tipoNuevo : tipo }) }
       catch { errores.push(f.name) }
     }
     try { await cargar() } catch (err) { setError(err) }
@@ -61,6 +63,7 @@ export default function Adjuntos({ obra, colgar, tipo = 'otro', titulo = 'Compro
   return (
     <div className="ob-adj">
       <span className="ob-label">{titulo}</span>
+      {clasificar && <label className="ob-campo">Tipo de archivo a adjuntar<select className="ob-input" value={tipoNuevo} onChange={e=>setTipoNuevo(e.target.value)}>{Object.entries(tiposDocumento).map(([v,n])=><option key={v} value={v}>{n}</option>)}</select></label>}
 
       <div className="ob-adj__botones">
         <button type="button" className="ob-btn" disabled={subiendo}
@@ -84,6 +87,7 @@ export default function Adjuntos({ obra, colgar, tipo = 'otro', titulo = 'Compro
           {docs.map((d) => (
             <li key={d.id}>
               <a href={d.url} target="_blank" rel="noreferrer">{d.nombre}</a>
+              {clasificar ? <select className="ob-input" aria-label={`Tipo de ${d.nombre}`} value={d.tipo} onChange={async e=>{try{await api.patch(`/api/obras/${obra.id}/documentos/${d.id}`,{tipo:e.target.value});await cargar()}catch(err){setError(err)}}}>{Object.entries(tiposDocumento).map(([v,n])=><option key={v} value={v}>{n}</option>)}</select> : <span>{tiposDocumento[d.tipo] || d.tipo}</span>}
               <span className="ob-adj__peso">
                 {d.bytes ? `${Math.round(d.bytes / 1024)} kB` : ''}
               </span>

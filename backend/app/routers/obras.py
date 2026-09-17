@@ -1,5 +1,7 @@
 """Obras: alta, listado y edicion de la ficha."""
 import uuid
+from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -43,16 +45,19 @@ class ObraNueva(BaseModel):
 
 
 class ObraCambio(BaseModel):
-    nombre: str | None = None
-    direccion: str | None = None
-    nomenclatura: str | None = None
-    partida_inmob: str | None = None
-    sup_terreno: float | None = None
-    sup_cubierta: float | None = None
-    sup_semicubierta: float | None = None
-    sup_descubierta: float | None = None
-    criterio_m2: str | None = None
-    desperdicio_pct: float | None = None
+    nombre: str | None = Field(default=None,min_length=1,max_length=160)
+    direccion: str | None = Field(default=None,max_length=300)
+    nomenclatura: str | None = Field(default=None,max_length=120)
+    partida_inmob: str | None = Field(default=None,max_length=60)
+    sup_terreno: float | None = Field(default=None,ge=0,lt=1e10,allow_inf_nan=False)
+    sup_cubierta: float | None = Field(default=None,ge=0,lt=1e10,allow_inf_nan=False)
+    sup_semicubierta: float | None = Field(default=None,ge=0,lt=1e10,allow_inf_nan=False)
+    sup_descubierta: float | None = Field(default=None,ge=0,lt=1e10,allow_inf_nan=False)
+    criterio_m2: Literal['cubierta','cubierta_mas_medio_semi','total'] | None = None
+    desperdicio_pct: float | None = Field(default=None,ge=0,le=100,allow_inf_nan=False)
+    moneda_base: Literal['ARS','USD'] | None = None
+    fecha_inicio: date | None = None
+    estado: Literal['en_curso','cerrada','archivada'] | None = None
 
 
 SELECT_OBRA = """
@@ -111,7 +116,7 @@ def crear(o: ObraNueva, usuario: dict = Depends(usuario_actual)):
 _EDITABLES = {
     "nombre", "direccion", "nomenclatura", "partida_inmob",
     "sup_terreno", "sup_cubierta", "sup_semicubierta", "sup_descubierta",
-    "criterio_m2", "desperdicio_pct",
+    "criterio_m2", "desperdicio_pct", "moneda_base", "fecha_inicio", "estado",
 }
 
 
@@ -120,9 +125,11 @@ def editar(obra_id: str, cambios: ObraCambio,
            acceso: dict = Depends(exige_acceso)):
     campos = {k: v for k, v in cambios.model_dump(exclude_unset=True).items()
               if k in _EDITABLES}
+    if any(campos[k] is None for k in ('nombre','criterio_m2','desperdicio_pct','moneda_base','estado') if k in campos):
+        raise HTTPException(422,'Nombre, criterio, desperdicio, moneda y estado no pueden quedar vacíos.')
     if not campos:
-        return ver(obra_id)
+        return ver(obra_id,acceso)
     sets = ", ".join(f"{k} = %s" for k in campos)
     db.execute(f"UPDATE dbo.obra SET {sets} WHERE id = %s",
                tuple(campos.values()) + (obra_id,))
-    return ver(obra_id)
+    return ver(obra_id,acceso)

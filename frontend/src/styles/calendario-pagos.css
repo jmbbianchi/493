@@ -41,7 +41,7 @@
 .cp-switch button { border:0; background:transparent; color:var(--ob-ink-2); padding:.5rem .7rem; font:inherit; font-size:.8rem; cursor:pointer; }
 .cp-switch button[aria-pressed=true] { background:var(--ob-accent, #1c3a58); color:white; }
 .cp-switch button:focus-visible { outline:2px solid #3286bd; outline-offset:-2px; }
-.cp-kpis { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); border:1px solid #cbd5e1; border-radius:4px; background:white; margin-bottom:.75rem; font-variant-numeric:tabular-nums; }
+.cp-kpis { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); border:1px solid #cbd5e1; border-radius:4px; background:white; margin-bottom:.75rem; font-variant-numeric:tabular-nums; }
 .cp-kpis > div { min-width:0; display:flex; flex-direction:column; justify-content:space-between; align-items:stretch; gap:.2rem; padding:.4rem .65rem; border-right:1px solid #e2e8f0; }
 .cp-kpis > div:last-child { border:0; }
 .cp-kpis span { color:var(--ob-ink-2); font-size:.72rem; white-space:nowrap; }

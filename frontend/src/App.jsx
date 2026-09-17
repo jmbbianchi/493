@@ -7,6 +7,7 @@ import Rubros from './pantallas/Rubros'
 import Presupuestos from './pantallas/Presupuestos'
 import Usuarios from './pantallas/Usuarios'
 import Pagar from './pantallas/Pagar'
+import CronogramaPagos from './pantallas/CronogramaPagos'
 import RubroDetalle from './pantallas/RubroDetalle'
 import Presupuesto from './pantallas/Presupuesto'
 import Computo from './pantallas/Computo'
@@ -65,10 +66,11 @@ export default function App() {
   return (
     <Routes>
       <Route path="/obra/:obraId"
-        element={<Layout obras={obras} indices={indices} version={version} tocado={tocado} />}>
+        element={<Layout obras={obras} indices={indices} version={version} tocado={tocado} recargarObras={cargarObras} />}>
         <Route index element={<Navigate to="como-viene" replace />} />
         <Route path="como-viene" element={<Proyecto />} />
-        <Route path="gastos" element={<Pagar />} />
+        <Route path="gastos" element={<CronogramaPagos />} />
+        <Route path="pagos" element={<Pagar />} />
         <Route path="presupuestos" element={<Presupuestos />} />
         <Route path="calculadora" element={<ConObra Pantalla={Materiales} />} />
         <Route path="documentacion" element={<ConObra Pantalla={Documentacion} />} />

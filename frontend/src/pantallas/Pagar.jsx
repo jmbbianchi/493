@@ -7,7 +7,8 @@ import Modal from '../componentes/Modal'
 import { subir } from '../subir'
 import { plata, num, fecha } from '../formato'
 import Adjuntos from '../componentes/Adjuntos'
-import CalendarioSemanalPagos from '../componentes/CalendarioSemanalPagos'
+import {tiposDocumento} from '../documentos'
+import '../styles/datos-obra.css'
 
 /**
  * Registrar Pago: lo que se pagó, y el botón para cargar uno nuevo.
@@ -32,6 +33,7 @@ export default function Pagar() {
   const [editando, setEditando] = useState(null)
   const [abiertoPago, setAbiertoPago] = useState(null)
   const [hecho, setHecho] = useState(null)
+  const [saldos,setSaldos]=useState({})
 
   const cargar = async () => {
     try {
@@ -40,7 +42,10 @@ export default function Pagar() {
         api.get(`/api/obras/${obra.id}/pagos`),
         api.get(`/api/obras/${obra.id}/documentos`),
       ])
-      setDestinos(d); setPagos(g)
+      const resumenes=Object.fromEntries(d.presupuestos.map(p=>[p.id,p]))
+      const faltantes=[...new Set(g.map(p=>p.presupuesto_id).filter(id=>id && !resumenes[id]))]
+      await Promise.all(faltantes.map(async id=>{const detalle=await api.get(`/api/obras/${obra.id}/presupuestos/${id}`);resumenes[id]={...detalle.total,moneda:detalle.presupuesto.moneda}}))
+      setDestinos(d); setPagos(g);setSaldos(resumenes)
       const porPago = {}
       for (const x of docs) if (x.pago_id) (porPago[x.pago_id] ??= []).push(x)
       setDocumentos(porPago)
@@ -69,18 +74,18 @@ export default function Pagar() {
   if (!destinos) return <p className="ob-cargando">Cargando…</p>
 
   const vivos = pagos.filter((p) => !p.anulado)
-  const saldoDe = (p) => p.presupuesto_id ? destinos.presupuestos.find((x) => x.id === p.presupuesto_id) : null
+  const saldoDe = (p) => p.presupuesto_id ? saldos[p.presupuesto_id] : null
   const importeSaldo = (p, campo='saldo') => saldoDe(p)?.[campo] == null ? 'Sin cotización' : `${saldoDe(p).moneda} ${num(saldoDe(p)[campo],2)}`
   const totalArs = vivos.filter((p) => p.moneda === 'ARS')
     .reduce((a, p) => a + p.monto, 0)
   const totalUsd = vivos.filter((p) => p.moneda === 'USD')
     .reduce((a, p) => a + p.monto, 0)
+  const detalle=pagos.find(p=>p.id===abiertoPago)
 
   return (
     <>
-      <CalendarioSemanalPagos key={obra.id} obraId={obra.id} superficie={obra.sup_cubierta} destinos={destinos} pagos={pagos} />
       <div className="ob-toolbar">
-        <span className="ob-label">Registrar Pago</span>
+        <h2 style={{margin:0}}>Registro de Pagos</h2>
         <span className="ob-toolbar__meta">
           {vivos.length === 0 ? 'Ningún pago registrado todavía' : (
             <>
@@ -119,7 +124,25 @@ export default function Pagar() {
         </div>
       )}
 
-      {editando && <Modal titulo="Editar pago" bajada="Corregí los datos del pago. Los comprobantes y su asignación se conservan; los avances de obra mantienen su fecha." alCerrar={() => setEditando(null)}><EditarPago pago={editando} obraId={obra.id} alGuardar={() => { setEditando(null); setHecho(null); cargar(); tocado() }} /></Modal>}
+      {detalle && <Modal titulo="Detalle del pago" alCerrar={()=>{setAbiertoPago(null);setEditando(null)}}>
+        <dl className="rp-detalle">
+          {[
+            ['Fecha de Pago',fecha(detalle.fecha)],['Importe',`${detalle.moneda} ${num(detalle.monto,2)}`],
+            ['Rubro',detalle.rubro],['Tipo',detalle.subrubro || 'Sin tipo'],['Medio',detalle.medio],
+            ['Presupuesto asociado',detalle.presupuesto || 'Pago sin presupuesto previo'],
+            ['Saldo pendiente del presupuesto',detalle.presupuesto_id ? importeSaldo(detalle) : 'No corresponde'],
+            ['Pagado del presupuesto',detalle.presupuesto_id ? importeSaldo(detalle,'pagado') : 'No corresponde'],
+            ['Total proyectado',detalle.presupuesto_id ? importeSaldo(detalle,'proyectado') : 'No corresponde'],
+            ['Equivalente del pago en ARS',detalle.monto_ars==null ? 'Sin cotización' : `ARS ${num(detalle.monto_ars,2)}`],
+            ['Aplicado al presupuesto',detalle.presupuesto_id && detalle.monto_presupuesto!=null ? `${saldoDe(detalle)?.moneda || ''} ${num(detalle.monto_presupuesto,2)}` : 'No corresponde'],
+            ['Cuota',detalle.cuota_descripcion || (detalle.cuota_id ? 'Cuota asignada' : 'Sin cuota específica')],
+            ['Notas',detalle.notas || 'Sin notas'],['Estado',detalle.anulado ? `Anulado: ${detalle.anulado_motivo || ''}` : 'Registrado'],
+          ].map(([titulo,valor])=><div key={titulo}><dt>{titulo}</dt><dd>{valor}</dd></div>)}
+        </dl>
+        <div className="rp-acciones">{!detalle.anulado && <><button className="ob-btn" onClick={()=>setEditando(editando ? null : detalle)}>{editando?'Cerrar edición':'Editar pago'}</button><button className="ob-btn" onClick={()=>anular(detalle)}>Anular</button></>}<button className="ob-btn" onClick={()=>eliminar(detalle)}>Eliminar definitivamente</button></div>
+        {editando && <EditarPago key={detalle.id} pago={detalle} obraId={obra.id} alGuardar={()=>{setEditando(null);setHecho(null);cargar();tocado()}}/>}
+        <Adjuntos obra={obra} colgar={{pago_id:detalle.id}} tipo="recibo" titulo="Recibos y comprobantes" clasificar provistos={documentos[detalle.id] ?? []} alCambiar={cargar}/>
+      </Modal>}
       {abierto && (
         <Modal titulo="Registrar un pago"
           bajada="Lo que acabás de pagar. La fecha viene en hoy y se puede diferir."
@@ -147,16 +170,17 @@ export default function Pagar() {
       ) : (
         <div className="ob-tablewrap">
           <table className="ob-table">
-            <colgroup><col className="ob-col-fecha" /><col className="ob-col-nombre" /><col className="ob-col-tipo" /><col className="ob-col-nombre" /><col className="ob-col-tipo" /><col className="ob-col-dinero" /><col className="ob-col-dinero" /><col className="ob-col-accion" /></colgroup>
+            <colgroup><col className="ob-col-fecha" /><col className="ob-col-nombre" /><col className="ob-col-tipo" /><col className="ob-col-nombre" /><col className="ob-col-tipo" /><col className="ob-col-dinero" /><col className="ob-col-dinero" /><col className="ob-col-tipo" /><col className="ob-col-accion" /></colgroup>
             <thead>
               <tr>
-                <th>Fecha</th>
+                <th>Fecha de Pago</th>
                 <th>Rubro</th>
                 <th>Tipo</th>
-                <th>Presupuesto</th>
+                <th>Presupuesto asociado</th>
                 <th>Medio</th>
                 <th className="ob-num">Monto</th>
                 <th className="ob-num">Saldo pendiente</th>
+                <th>Adjuntos</th>
                 <th></th>
               </tr>
             </thead>
@@ -167,26 +191,18 @@ export default function Pagar() {
                   <td>{p.rubro}</td>
                   <td className="ob-table__sec">{p.subrubro || '—'}</td>
                   <td className="ob-table__sec">
-                    {p.presupuesto || 'suelto'}
+                    {p.presupuesto || 'Sin presupuesto previo'}
                     {p.anulado && <span className="ob-chip ob-chip--bad"
                       style={{ marginLeft: '.4rem' }}>anulado</span>}
                   </td>
                   <td className="ob-table__sec">{p.medio}</td>
                   <td className="ob-num">
-                    {p.moneda === 'USD' ? `u$d ${num(p.monto, 2)}` : plata(p.monto)}
+                    {p.moneda === 'USD' ? <><span className="ob-chip ob-chip--mudo">U$D</span> {num(p.monto,2)}</> : plata(p.monto)}
                   </td>
                   <td className="ob-num">{saldoDe(p) ? importeSaldo(p) : '—'}</td>
+                  <td>{documentos[p.id]?.length ? `Sí · ${documentos[p.id].length}` : 'Sin adjuntos'}</td>
                   <td style={{ width: '5rem' }}><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setAbiertoPago(abiertoPago === p.id ? null : p.id) }}>{abiertoPago === p.id ? 'Cerrar' : 'Detalle'}</button></td>
                 </tr>
-                {abiertoPago === p.id && <tr><td colSpan={8}><div className="ob-pago-detalle">
-                  <b>{p.presupuesto || 'Pago suelto'}</b> · {p.rubro} / {p.subrubro || 'Sin tipo'}<br />
-                  {saldoDe(p) && <><br /><span>Saldo pendiente actual: <b>{importeSaldo(p)}</b> · pagado: {importeSaldo(p,'pagado')} · proyectado: {importeSaldo(p,'proyectado')}</span></>}
-                  {p.cuota_id && <><br />Cuota asignada: {p.cuota_id}</>}
-                  {p.notas && <><br />Notas: {p.notas}</>}
-                  {p.anulado && <><br />Motivo de anulación: {p.anulado_motivo}</>}
-                  <div><button className="ob-btn" onClick={() => eliminar(p)}>Eliminar definitivamente</button></div>
-                  {!p.anulado && <div className="ob-pago-detalle__acciones"><button className="ob-btn" onClick={(e) => { e.stopPropagation(); setEditando(p) }}>Editar</button><button className="ob-btn" onClick={(e) => { e.stopPropagation(); anular(p) }}>Anular</button><Adjuntos obra={obra} colgar={{ pago_id: p.id }} tipo="factura" titulo="Comprobantes" provistos={documentos[p.id] ?? []} alCambiar={cargar} /></div>}
-                </div></td></tr>}
               </Fragment>
               )}
             </tbody>
@@ -210,6 +226,7 @@ function Formulario({ obra, destinos, alGuardar }) {
   // El comprobante se elige antes de guardar pero se sube despues: hasta
   // que el pago no existe no hay pago_id del que colgarlo.
   const [comprobantes, setComprobantes] = useState([])
+  const [tiposComprobante,setTiposComprobante]=useState({})
   const [proyecto, setProyecto] = useState(null)
   const [vinculos, setVinculos] = useState([])
   const [avances, setAvances] = useState({})
@@ -295,9 +312,9 @@ function Formulario({ obra, destinos, alGuardar }) {
       // señal, se acabaron los datos -- el pago NO se pierde: se avisa y
       // el comprobante se adjunta despues desde la lista.
       const fallidos = []
-      for (const comprobante of comprobantes) {
+      for (const [i,comprobante] of comprobantes.entries()) {
         setPaso('Subiendo ' + comprobante.name + '…')
-        try { await subir(obra.id, comprobante, { tipo: 'factura', pago_id: r.id }) }
+        try { await subir(obra.id, comprobante, { tipo: tiposComprobante[i] || 'recibo', pago_id: r.id }) }
         catch { fallidos.push(comprobante.name) }
       }
       const aviso = [r.aviso, fallidos.length ? 'No se subieron: ' + fallidos.join(', ') : null].filter(Boolean).join(' ')
@@ -430,14 +447,15 @@ function Formulario({ obra, destinos, alGuardar }) {
           </label>
           {comprobantes.length > 0 && (
             <button type="button" className="ob-adj__quitar"
-              onClick={() => setComprobantes([])} aria-label="Quitar">×</button>
+              onClick={() => {setComprobantes([]);setTiposComprobante({})}} aria-label="Quitar">×</button>
           )}
         </div>
         <span className="ob-campo__pie">
           {comprobantes.length
             ? comprobantes.map((f) => f.name).join(', ')
-            : 'Opcional. Un pago sin comprobante es tu palabra contra la del otro tres meses después.'}
+            : 'Podés adjuntar recibos y comprobantes de transferencia al mismo pago.'}
         </span>
+        {comprobantes.map((f,i)=><label className="ob-campo" key={i}>{f.name}<select className="ob-input" aria-label={`Tipo de ${f.name}`} value={tiposComprobante[i] || 'recibo'} onChange={e=>setTiposComprobante({...tiposComprobante,[i]:e.target.value})}>{Object.entries(tiposDocumento).map(([v,n])=><option key={v} value={v}>{n}</option>)}</select></label>)}
       </div>
 
       <button className="ob-btn ob-btn--primario ob-pagar__guardar" type="submit"
@@ -459,7 +477,7 @@ function EditarPago({ pago, obraId, alGuardar }) {
     catch (err) { setError(err); setOcupado(false) }
   }}>
     <Aviso error={error} alCerrar={() => setError(null)} />
-    <label className="ob-campo">Fecha<input className="ob-input" type="date" required {...campo('fecha')} /></label>
+    <label className="ob-campo">Fecha de Pago<input className="ob-input" type="date" required {...campo('fecha')} /></label>
     <label className="ob-campo">Moneda<select className="ob-input" {...campo('moneda')}><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select></label>
     <label className="ob-campo">Monto ({datos.moneda})<input className="ob-input" type="number" min="0.01" step="0.01" required {...campo('monto')} /></label>
     <p>Cambiar la moneda corrige el registro y conserva el número ingresado; no convierte el importe.</p>

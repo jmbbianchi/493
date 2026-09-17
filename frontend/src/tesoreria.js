@@ -79,6 +79,7 @@ export function tesoreria({ presupuestos, pagos, programaciones = [], tasas = []
   const resumir = rs => ({ pendiente:sumar(rs.map(r=>r.pendiente)), pagado:sumar(rs.map(r=>r.pagado)) })
   return { registros, filas:[...filas.values()].sort((a,b)=>`${a.tipo}/${a.rubro}`.localeCompare(`${b.tipo}/${b.rubro}`)),
     ...resumir(registros), actual,
+    aprobado:sumar(presupuestos.map(p=>convertirCentavos(cents(p.nominal ?? p.monto_base ?? (p.cuotas || []).filter(c=>c.estado!=='anulada').reduce((s,c)=>s+Number(c.monto_nominal),0)),p.moneda,moneda,actual))),
     semanaActual:resumir(registros.filter(r=>r.semana===semanaActual)).pendiente,
     proxima:resumir(registros.filter(r=>r.semana===sumarDias(semanaActual,7))).pendiente,
     siguiente:resumir(registros.filter(r=>r.semana===sumarDias(semanaActual,14))).pendiente,

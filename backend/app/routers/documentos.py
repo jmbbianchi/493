@@ -35,7 +35,7 @@ MAX_BYTES = 20 * 1024 * 1024
 
 
 class Pedido(BaseModel):
-    tipo: str = Field(pattern="^(foto|presupuesto|factura|remito|plano|otro)$")
+    tipo: str = Field(pattern="^(foto|presupuesto|factura|recibo|transferencia|remito|plano|otro)$")
     nombre: str = Field(min_length=1, max_length=260)
     mime: str | None = None
     bytes: int | None = Field(default=None, gt=0)
@@ -123,3 +123,16 @@ def borrar(obra_id: str, documento_id: str):
     if not n:
         raise HTTPException(404, "No existe ese documento en esta obra.")
     return {"ok": True}
+
+
+class TipoDocumento(BaseModel):
+    tipo: str = Field(pattern="^(foto|presupuesto|factura|recibo|transferencia|remito|plano|otro)$")
+
+
+@router.patch('/documentos/{documento_id}')
+def clasificar(obra_id: str, documento_id: str, datos: TipoDocumento):
+    n=db.execute('UPDATE dbo.documento SET tipo=%s WHERE id=%s AND obra_id=%s AND subido=1',
+                 (datos.tipo,documento_id,obra_id))
+    if not n:
+        raise HTTPException(404,'No existe ese documento en esta obra.')
+    return {'actualizado':True}

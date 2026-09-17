@@ -8,7 +8,7 @@ import { num } from './formato'
  * La obra sale de la URL, no del estado. Es lo que hace que un link se pueda
  * pegar en un mensaje y abra exactamente lo que el otro estaba mirando.
  */
-export default function Layout({ obras, indices, version, tocado }) {
+export default function Layout({ obras, indices, version, tocado, recargarObras }) {
   const { obraId } = useParams()
   const obra = obras.find((o) => o.id === obraId)
 
@@ -34,7 +34,7 @@ export default function Layout({ obras, indices, version, tocado }) {
         </header>
 
         <main className="ob-pantalla">
-          <Outlet context={{ obra, version, tocado }} />
+          <Outlet context={{ obra, version, tocado, recargarObras }} />
         </main>
       </div>
     </div>

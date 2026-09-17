@@ -56,7 +56,7 @@ export default function CalendarioSemanalPagos({ obraId, superficie, destinos, p
     setAviso(`${q.descripcion}: ${nueva ? 'programado para el '+fecha(nueva) : 'sin fecha programada'}.`);cerrar()
   }
   return <section className="cp-panel">
-    <div className="cp-cabecera"><div><h2>Control de gastos</h2><p>Planificá cuánto necesitás y cuándo.</p></div>
+    <div className="cp-cabecera"><div><h2>Cronograma de Pagos</h2><p>Planificá cuánto necesitás y cuándo.</p></div>
       <div className="cp-switch" role="group" aria-label="Moneda de la vista">{['ARS','USD'].map(m=><button key={m} aria-pressed={moneda===m} onClick={()=>setMoneda(m)}>{m==='ARS' ? 'Pesos' : 'Dólares'}</button>)}</div>
     </div>
     {error ? <p role="alert">{error} <button className="ob-btn" onClick={()=>setRecarga(n=>n+1)}>Reintentar</button></p> : datos===null ? <p role="status">Cargando gastos y cotizaciones…</p> : <>
@@ -64,9 +64,10 @@ export default function CalendarioSemanalPagos({ obraId, superficie, destinos, p
         ['Esta semana',modelo.semanaActual,'Incluye el saldo vencido de semanas anteriores'],
         ['Próxima semana',modelo.proxima,`${fecha(sumarDias(semana(hoy),7))} al ${fecha(sumarDias(semana(hoy),13))}`],
         ['Semana siguiente',modelo.siguiente,`${fecha(sumarDias(semana(hoy),14))} al ${fecha(sumarDias(semana(hoy),20))}`],
+        ['Presupuestos aprobados',modelo.aprobado,'Total pactado de presupuestos elegidos, convertido a la cotización actual; sin proyección IPC'],
+        ['Gasto acumulado',modelo.pagado,'Pagos realizados hasta hoy, incluidos los pagos sin presupuesto; convertidos a su cotización histórica'],
         ['Saldo pendiente',modelo.pendiente,'Todas las fechas, incluso sin programar y fuera del período visible'],
-        ['Gasto acumulado',modelo.pagado,'Pagos realizados hasta hoy, incluidos los pagos sin presupuesto'],
-        ['Gasto / m²',Number(superficie)>0 && modelo.pagado!=null ? Math.round(modelo.pagado/Number(superficie)) : null,`Pagado / ${num(superficie || 0,2)} m² cubiertos`],
+        ['Gasto / m²',Number(superficie)>0 && modelo.pagado!=null ? Math.round(modelo.pagado/Number(superficie)) : null,`Pagado / ${num(superficie || 0,2)} m² según Datos de obra`],
       ].map(([label,value,title])=><div key={label} title={title}><span>{label}</span><strong>{label==='Gasto / m²' && !(Number(superficie)>0) ? 'Sin superficie' : dinero(value)}</strong></div>)}</div>
       <div className="cp-controles">
         <div className="cp-switch" role="group" aria-label="Vista de gastos"><button aria-pressed={modo==='semanas'} onClick={()=>setModo('semanas')}>Por semana</button><button aria-pressed={modo==='rubros'} onClick={()=>setModo('rubros')}>Por rubro</button></div>

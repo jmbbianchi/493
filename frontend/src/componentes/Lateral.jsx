@@ -12,10 +12,11 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 // despues la plata por rubro, y al final las herramientas de calculo.
 const SECCIONES = [
   ['como-viene', 'Proyecto'],
-  ['gastos', 'Gastos y compras'],
+  ['gastos', 'Cronograma de Pagos'],
+  ['pagos', 'Registro de Pagos'],
   ['presupuestos', 'Presupuestos'],
   ['calculadora', 'Calculadora de materiales'],
-  ['documentacion', 'Documentación y parámetros'],
+  ['documentacion', 'Datos y documentación de obra'],
   ['financiacion', 'Financiación'],
   ['cotizaciones', 'Cotizaciones'],
 ]

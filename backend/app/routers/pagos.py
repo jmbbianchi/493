@@ -138,13 +138,14 @@ def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None
     sql = """
         SELECT g.id, g.rubro_id, r.nombre AS rubro,
                g.subrubro_id, s.nombre AS subrubro,
-               g.presupuesto_id, g.cuota_id, p.nombre AS presupuesto,
+               g.presupuesto_id, g.cuota_id, p.nombre AS presupuesto, c.descripcion AS cuota_descripcion,
                g.fecha, g.monto, g.moneda, g.medio, g.notas,
                g.anulado, g.anulado_motivo
         FROM dbo.pago g
         JOIN dbo.rubro r ON r.id = g.rubro_id
         LEFT JOIN dbo.subrubro s ON s.id = g.subrubro_id
         LEFT JOIN dbo.presupuesto p ON p.id = g.presupuesto_id
+        LEFT JOIN dbo.cuota c ON c.id = g.cuota_id
         WHERE g.obra_id = %s
     """
     params: tuple = (obra_id,)
