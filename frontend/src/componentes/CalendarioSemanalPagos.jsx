@@ -66,8 +66,8 @@ export default function CalendarioSemanalPagos({ obraId, superficie, destinos, p
         ['Próxima semana',modelo.proxima,`${fecha(sumarDias(semana(hoy),7))} al ${fecha(sumarDias(semana(hoy),13))}`],
         ['Semana siguiente',modelo.siguiente,`${fecha(sumarDias(semana(hoy),14))} al ${fecha(sumarDias(semana(hoy),20))}`],
         ['Presupuestos aprobados',modelo.aprobado,'Total pactado de todos los presupuestos confirmados, convertido a la cotización actual; sin proyección IPC'],
-        ['Gasto acumulado',modelo.pagado,'Pagos realizados hasta hoy, incluidos los pagos sin presupuesto; convertidos a su cotización histórica'],
-        ['Saldo pendiente',modelo.pendiente,'Todas las fechas, incluso sin programar y fuera del período visible'],
+        ['Pagado',modelo.pagado,'Pagos realizados hasta hoy, incluidos los pagos sin presupuesto; mismo total que en Registro de Pagos'],
+        ['Saldo total',modelo.pendiente,'Todas las fechas, incluso sin programar y fuera del período visible; mismo total que en Registro de Pagos'],
       ].map(([label,value,title])=><div key={label} title={title}><span>{label}</span><strong>{dinero(value)}</strong></div>)}
         <div className="cp-m2">{[['Valor m²',modelo.aprobado,'Presupuestos aprobados'],['Gasto m²',modelo.pagado,'Gasto acumulado']].map(([label,valor,base])=>
           <div className="cp-m2-fila" key={label} title={`${base} / ${num(superficie || 0,2)} m² según Datos de obra`}><span>{label}</span><strong>{!(Number(superficie)>0) ? 'Sin superficie' : dinero(valor==null ? null : Math.round(valor/Number(superficie)))}</strong></div>

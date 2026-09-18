@@ -13,7 +13,7 @@ import '../styles/datos-obra.css'
 import FiltrosPagos from '../componentes/FiltrosPagos'
 import {filtrosVacios,filtrarPagos} from '../filtrosPagos'
 import {importePago,convertirRegistro,resumenRegistro} from '../monedaRegistro'
-import {tasaEn,sumar} from '../tesoreria'
+import {tasaEn,sumar,tesoreria} from '../tesoreria'
 import '../styles/calendario-pagos.css'
 
 /**
@@ -54,8 +54,8 @@ export default function Pagar() {
         api.get('/api/indices/dolar-calendario'),
       ])
       const resumenes=Object.fromEntries(d.presupuestos.map(p=>[p.id,p]))
-      const faltantes=[...new Set(g.map(p=>p.presupuesto_id).filter(id=>id && !resumenes[id]))]
-      await Promise.all(faltantes.map(async id=>{const detalle=await api.get(`/api/obras/${obra.id}/presupuestos/${id}`);resumenes[id]={...detalle.total,moneda:detalle.presupuesto.moneda}}))
+      const ids=[...new Set([...Object.keys(resumenes),...g.map(p=>p.presupuesto_id).filter(Boolean)])]
+      await Promise.all(ids.map(async id=>{const detalle=await api.get(`/api/obras/${obra.id}/presupuestos/${id}`);resumenes[id]={...detalle.total,...resumenes[id],moneda:detalle.presupuesto.moneda,cuotas:detalle.cuotas}}))
       setDestinos(d); setPagos(g);setSaldos(resumenes);setTasas(cotizaciones)
       const porPago = {}
       for (const x of docs) if (x.pago_id) (porPago[x.pago_id] ??= []).push(x)
@@ -88,8 +88,14 @@ export default function Pagar() {
   const vivos = visibles.filter((p) => !p.anulado)
   const saldoDe = (p) => p.presupuesto_id ? saldos[p.presupuesto_id] : null
   const resumen=resumenRegistro(visibles,saldos,monedaVista,tasas,hoyArgentina())
+  const general=tesoreria({presupuestos:destinos.presupuestos.map(p=>({...p,cuotas:saldos[p.id]?.cuotas || []})),pagos,tasas,hoy:hoyArgentina(),moneda:monedaVista})
+  const idsFiltrados=new Set(vivos.map(p=>p.presupuesto_id).filter(Boolean))
+  const saldoFiltrado=sumar(general.registros.filter(r=>idsFiltrados.has(r.presupuesto_id)).map(r=>r.pendiente))
+  const saldoActual=p=>destinos.presupuestos.some(d=>d.id===p.presupuesto_id)
+    ? sumar(general.registros.filter(r=>r.presupuesto_id===p.presupuesto_id).map(r=>r.pendiente))
+    : convertirRegistro(saldoDe(p)?.saldo,saldoDe(p)?.moneda,monedaVista,resumen.actual)
   const dineroVista=v=>v==null?'Sin cotización':`${monedaVista} ${num(v/100,2)}`
-  const importeSaldo = (p, campo='saldo') => dineroVista(campo==='pagado'
+  const importeSaldo = (p, campo='saldo') => dineroVista(campo==='saldo' ? saldoActual(p) : campo==='pagado'
     ? sumar(pagos.filter(g=>g.presupuesto_id===p.presupuesto_id && !g.anulado && g.fecha.slice(0,10)<=hoyArgentina()).map(g=>importePago(g,monedaVista,tasas)))
     : convertirRegistro(saldoDe(p)?.[campo],saldoDe(p)?.moneda,monedaVista,resumen.actual))
   const detalleCotizacion=p=>{const t=tasaEn(tasas,p.fecha.slice(0,10));return `Original: ${p.moneda} ${num(p.monto,2)}${p.moneda===monedaVista?'':t?` · 1 USD = ARS ${num(t.valor,2)} del ${fecha(t.fecha)}`:' · Sin cotización histórica'}`}
@@ -115,8 +121,10 @@ export default function Pagar() {
 
       <FiltrosPagos pagos={pagos} documentos={documentos} presupuestos={saldos} valor={filtros} onChange={setFiltros} cantidad={visibles.length}/>
       <div className="rp-totales" aria-label="Totales filtrados">
-        <span title="Suma de los pagos visibles no anulados, convertidos con la cotización de cada fecha de pago">Total pagos filtrados <strong>{dineroVista(resumen.total)}</strong></span>
-        <span title="Saldo actual de los presupuestos asociados a los pagos filtrados, contado una sola vez por presupuesto">Saldo de presupuestos asociados <strong>{dineroVista(resumen.pendiente)}</strong> <small>({resumen.presupuestos})</small></span>
+        <span title="Todos los pagos realizados hasta hoy; mismo importe que en Cronograma">Pagado <strong>{dineroVista(general.pagado)}</strong></span>
+        <span title="Todos los compromisos pendientes de la obra; mismo importe que en Cronograma">Saldo total <strong>{dineroVista(general.pendiente)}</strong></span>
+        <span title="Pagos visibles realizados hasta hoy, sin anulados">Pagado filtrado <strong>{dineroVista(resumen.total)}</strong></span>
+        <span title="Saldo de los presupuestos asociados a los pagos visibles, sin duplicarlos">Saldo filtrado <strong>{dineroVista(saldoFiltrado)}</strong></span>
         <small>Pagos al dólar histórico · Saldos al dólar actual{resumen.actual?` del ${fecha(resumen.actual.fecha)}`:''} · Anulados excluidos</small>
       </div>
 
