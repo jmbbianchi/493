@@ -172,6 +172,10 @@ def listar(obra_id: str, rubro_id: int | None = None, presupuesto_id: str | None
 
 
 class PagoEdicion(BaseModel):
+    rubro_id: int | None = Field(default=None, gt=0)
+    subrubro_id: int | None = Field(default=None, gt=0)
+    presupuesto_id: uuid.UUID | None = None
+    cuota_id: uuid.UUID | None = None
     moneda: str | None = Field(default=None, pattern="^(ARS|USD)$")
     fecha: date
     monto: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
@@ -181,6 +185,43 @@ class PagoEdicion(BaseModel):
 
 @router.patch("/pagos/{pago_id}")
 def editar(obra_id: str, pago_id: str, p: PagoEdicion):
+    if p.model_fields_set & {'rubro_id','subrubro_id','presupuesto_id','cuota_id'}:
+        from ..cierres import exigir_abierto
+        with db.cursor() as cur:
+            cur.execute('SELECT id FROM dbo.obra WITH (XLOCK,HOLDLOCK) WHERE id=%s',(obra_id,))
+            if not cur.fetchone(): raise HTTPException(404,'No existe la obra.')
+            cur.execute('SELECT * FROM dbo.pago WITH (UPDLOCK,HOLDLOCK) WHERE id=%s AND obra_id=%s AND anulado=0',(pago_id,obra_id))
+            anterior=cur.fetchone()
+            if not anterior: raise HTTPException(409,'El pago no existe o está anulado.')
+            if anterior['presupuesto_id']:
+                cur.execute('SELECT cierre_fecha FROM dbo.presupuesto WITH (UPDLOCK,HOLDLOCK) WHERE id=%s',(anterior['presupuesto_id'],))
+                exigir_abierto(cur.fetchone() or {})
+            cambios=p.model_dump(exclude_unset=True)
+            rubro=cambios.get('rubro_id',anterior['rubro_id'])
+            tipo=cambios.get('subrubro_id',anterior['subrubro_id'])
+            presupuesto=cambios.get('presupuesto_id',anterior['presupuesto_id'])
+            presupuesto=str(presupuesto) if presupuesto else None
+            cuota=cambios.get('cuota_id',anterior['cuota_id'] if str(anterior['presupuesto_id'])==str(presupuesto) else None)
+            cuota=str(cuota) if cuota else None
+            cur.execute('SELECT id FROM dbo.rubro WHERE id=%s',(rubro,))
+            if not cur.fetchone(): raise HTTPException(422,'Seleccioná un rubro válido.')
+            if tipo:
+                cur.execute('SELECT id FROM dbo.subrubro WHERE id=%s',(tipo,))
+                if not cur.fetchone(): raise HTTPException(422,'Seleccioná un tipo válido.')
+            if presupuesto:
+                cur.execute('SELECT rubro_id,subrubro_id,estado,cierre_fecha FROM dbo.presupuesto WITH (UPDLOCK,HOLDLOCK) WHERE id=%s AND obra_id=%s',(presupuesto,obra_id))
+                destino=cur.fetchone()
+                if not destino: raise HTTPException(422,'El presupuesto no pertenece a esta obra.')
+                exigir_abierto(destino)
+                if destino['estado']!='confirmado' or destino['rubro_id']!=rubro or destino['subrubro_id']!=tipo:
+                    raise HTTPException(422,'El presupuesto debe estar confirmado y corresponder al rubro y tipo seleccionados.')
+            if cuota:
+                cur.execute("SELECT id FROM dbo.cuota WHERE id=%s AND presupuesto_id=%s AND estado<>'anulada'",(cuota,presupuesto))
+                if not presupuesto or not cur.fetchone(): raise HTTPException(422,'La cuota no corresponde al presupuesto.')
+            cur.execute('''UPDATE dbo.pago SET fecha=%s,monto=%s,medio=%s,notas=%s,moneda=%s,
+                rubro_id=%s,subrubro_id=%s,presupuesto_id=%s,cuota_id=%s WHERE id=%s AND obra_id=%s''',
+                (p.fecha,p.monto,p.medio,p.notas,p.moneda or anterior['moneda'],rubro,tipo,presupuesto,cuota,pago_id,obra_id))
+        return {'id':pago_id}
     n = db.execute("""UPDATE dbo.pago SET fecha=%s, monto=%s, medio=%s, notas=%s, moneda=COALESCE(%s,moneda)
         WHERE id=%s AND obra_id=%s AND anulado=0
         AND NOT EXISTS (SELECT 1 FROM dbo.presupuesto p WHERE p.id=dbo.pago.presupuesto_id AND p.cierre_fecha IS NOT NULL)""",

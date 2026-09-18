@@ -160,7 +160,7 @@ export default function Pagar() {
           ].map(([titulo,valor])=><div key={titulo}><dt>{titulo}</dt><dd>{valor}</dd></div>)}
         </dl>
         {detalle.presupuesto_cierre_fecha ? <p>Presupuesto cerrado el {fecha(detalle.presupuesto_cierre_fecha)}. Este pago se conserva como historial.</p> : <div className="rp-acciones">{!detalle.anulado && <><button className="ob-btn" onClick={()=>setEditando(editando ? null : detalle)}>{editando?'Cerrar edición':'Editar pago'}</button><button className="ob-btn" onClick={()=>anular(detalle)}>Anular</button></>}<button className="ob-btn" onClick={()=>eliminar(detalle)}>Eliminar definitivamente</button></div>}
-        {editando && <EditarPago key={detalle.id} pago={detalle} obraId={obra.id} alGuardar={()=>{setEditando(null);setHecho(null);cargar();tocado()}}/>}
+        {editando && <EditarPago key={detalle.id} pago={detalle} obraId={obra.id} destinos={destinos} alGuardar={()=>{setEditando(null);setHecho(null);cargar();tocado()}}/>}
         <Adjuntos obra={obra} colgar={{pago_id:detalle.id}} tipo="recibo" titulo="Recibos y comprobantes" clasificar provistos={documentos[detalle.id] ?? []} alCambiar={cargar}/>
       </Modal>}
       {abierto && (
@@ -487,23 +487,35 @@ function Formulario({ obra, destinos, alGuardar }) {
   )
 }
 
-function EditarPago({ pago, obraId, alGuardar }) {
-  const [datos, setDatos] = useState({fecha: pago.fecha.slice(0,10), monto: String(pago.monto), moneda: pago.moneda, medio: pago.medio, notas: pago.notas || ''})
+function EditarPago({ pago, obraId, destinos, alGuardar }) {
+  const [datos, setDatos] = useState({fecha: pago.fecha.slice(0,10), monto: String(pago.monto), moneda: pago.moneda, medio: pago.medio, notas: pago.notas || '',rubro_id:String(pago.rubro_id),subrubro_id:pago.subrubro_id==null?'':String(pago.subrubro_id),presupuesto_id:pago.presupuesto_id || '',cuota_id:pago.cuota_id || ''})
   const [error, setError] = useState(null)
   const [ocupado, setOcupado] = useState(false)
+  const [cuotas,setCuotas]=useState([]),[cargandoCuotas,setCargandoCuotas]=useState(false)
+  useEffect(()=>{let activo=true;setCuotas([]);setError(null)
+    if(!datos.presupuesto_id){setCargandoCuotas(false);return()=>{activo=false}}
+    setCargandoCuotas(true)
+    api.get(`/api/obras/${obraId}/presupuestos/${datos.presupuesto_id}`).then(d=>{if(activo){setCuotas(d.cuotas.filter(c=>c.estado!=='anulada'));setCargandoCuotas(false)}}).catch(e=>{if(activo){setError(e);setCargandoCuotas(false)}})
+    return()=>{activo=false}
+  },[obraId,datos.presupuesto_id])
+  const presupuestos=destinos.presupuestos.filter(p=>!p.cerrado && String(p.rubro_id)===datos.rubro_id && String(p.subrubro_id ?? '')===datos.subrubro_id)
   const campo = (nombre) => ({value: datos[nombre], onChange: e => setDatos({...datos, [nombre]: e.target.value})})
   return <form onSubmit={async e => {
     e.preventDefault(); setOcupado(true); setError(null)
-    try { await api.patch(`/api/obras/${obraId}/pagos/${pago.id}`, {...datos, monto: datos.monto}); alGuardar() }
+    try { await api.patch(`/api/obras/${obraId}/pagos/${pago.id}`, {...datos,rubro_id:Number(datos.rubro_id),subrubro_id:datos.subrubro_id?Number(datos.subrubro_id):null,presupuesto_id:datos.presupuesto_id||null,cuota_id:datos.cuota_id||null}); alGuardar() }
     catch (err) { setError(err); setOcupado(false) }
   }}>
     <Aviso error={error} alCerrar={() => setError(null)} />
+    <label className="ob-campo">Rubro<select className="ob-input" required value={datos.rubro_id} onChange={e=>setDatos({...datos,rubro_id:e.target.value,presupuesto_id:'',cuota_id:''})}>{destinos.rubros.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</select></label>
+    <label className="ob-campo">Tipo<select className="ob-input" value={datos.subrubro_id} onChange={e=>setDatos({...datos,subrubro_id:e.target.value,presupuesto_id:'',cuota_id:''})}><option value="">Sin tipo</option>{destinos.subrubros.map(s=><option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label>
+    <label className="ob-campo">Presupuesto asociado<select className="ob-input" value={datos.presupuesto_id} onChange={e=>setDatos({...datos,presupuesto_id:e.target.value,cuota_id:''})}><option value="">Sin presupuesto previo</option>{presupuestos.map(p=><option key={p.id} value={p.id}>{p.nombre} · {fecha(p.fecha_base)} · {p.moneda} {num(p.nominal,2)}</option>)}</select></label>
+    {datos.presupuesto_id && <label className="ob-campo">Cuota o anticipo<select className="ob-input" disabled={cargandoCuotas} {...campo('cuota_id')}><option value="">Sin cuota específica</option>{cuotas.map(c=><option key={c.id} value={c.id}>{c.descripcion} · {fecha(c.fecha_prevista)}</option>)}</select></label>}
     <label className="ob-campo">Fecha de Pago<input className="ob-input" type="date" required {...campo('fecha')} /></label>
     <label className="ob-campo">Moneda<select className="ob-input" {...campo('moneda')}><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select></label>
     <label className="ob-campo">Monto ({datos.moneda})<input className="ob-input" type="number" min="0.01" step="0.01" required {...campo('monto')} /></label>
     <p>Cambiar la moneda corrige el registro y conserva el número ingresado; no convierte el importe.</p>
     <label className="ob-campo">Medio<select className="ob-input" {...campo('medio')}>{['transferencia','efectivo','cheque','otro'].map(m => <option key={m}>{m}</option>)}</select></label>
     <label className="ob-campo">Notas<input className="ob-input" {...campo('notas')} /></label>
-    <button className="ob-btn ob-btn--primario" disabled={ocupado}>{ocupado ? 'Guardando…' : 'Guardar cambios'}</button>
+    <button className="ob-btn ob-btn--primario" disabled={ocupado || cargandoCuotas}>{ocupado ? 'Guardando…' : 'Guardar cambios'}</button>
   </form>
 }
