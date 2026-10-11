@@ -18,7 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
 from .routers import (calculadora, computo, cronograma, documentos, obras,
-                      pagos, presupuestos, usuarios, proyecto, financiacion, desembolsos, calendario, cotizaciones)
+                      pagos, presupuestos, usuarios, proyecto, financiacion, desembolsos, calendario, cotizaciones,
+                      listas)
 
 app = FastAPI(title="obra493", docs_url="/docs")
 
@@ -56,6 +57,7 @@ app.include_router(financiacion.router)
 app.include_router(desembolsos.router)
 app.include_router(calendario.router)
 app.include_router(cotizaciones.router)
+app.include_router(listas.router)
 
 
 @app.get("/health")

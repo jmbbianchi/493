@@ -9,6 +9,7 @@ import SelectorCategoria from '../componentes/SelectorCategoria'
 import { totalAcuerdo, repartirAcuerdo } from '../acuerdos'
 import { plata, num, fecha } from '../formato'
 import CerrarPresupuesto from '../componentes/CerrarPresupuesto'
+import { visibles } from '../listas'
 
 /**
  * Un presupuesto con su plan de pago abierto cuota por cuota.
@@ -351,8 +352,8 @@ function EditorAcuerdo({ datos: inicial, obraId, presupuestoId, alCerrar, alGuar
   return <Modal titulo="Editar acuerdo" bajada="Los pagos ya registrados se conservan. Las cuotas pagadas no se pueden alterar." alCerrar={alCerrar}>
     <Aviso error={error} alCerrar={() => setError(null)} />
     <label className="ob-campo"><span className="ob-label">Nombre / proveedor</span><input className="ob-input" value={d.nombre} onChange={(e) => setD({ ...d, nombre: e.target.value })} /></label>
-    <label className="ob-campo"><span className="ob-label">Rubro</span><SelectorCategoria tipo="rubros" className="ob-input" value={d.rubro_id} onChange={e=>setD({...d,rubro_id:e.target.value})}>{d.rubros.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</SelectorCategoria></label>
-    <label className="ob-campo"><span className="ob-label">Tipo</span><SelectorCategoria tipo="subrubros" className="ob-input" value={d.subrubro_id} onChange={e=>setD({...d,subrubro_id:e.target.value})}>{d.subrubros.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</SelectorCategoria></label>
+    <label className="ob-campo"><span className="ob-label">Rubro</span><SelectorCategoria tipo="rubros" className="ob-input" value={d.rubro_id} onChange={e=>setD({...d,rubro_id:e.target.value})}>{visibles(d.rubros, d.rubro_id).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</SelectorCategoria></label>
+    <label className="ob-campo"><span className="ob-label">Tipo</span><SelectorCategoria tipo="subrubros" className="ob-input" value={d.subrubro_id} onChange={e=>setD({...d,subrubro_id:e.target.value})}>{visibles(d.subrubros, d.subrubro_id).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</SelectorCategoria></label>
     <label className="ob-campo"><span className="ob-label">Nuevo total negociado · {d.moneda}</span><input className="ob-input ob-num" type="number" min="0.01" step="0.01" value={nuevoTotal} onChange={e=>{setNuevoTotal(e.target.value);setTotalPendiente(true)}} /></label>
     <button className="ob-btn" onClick={()=>{try{setD({...d,cuotas:repartirAcuerdo(d.cuotas,nuevoTotal)});setTotalPendiente(false);setError(null)}catch(e){setError(e)}}}>Aplicar total a los desembolsos</button>
     <p className="ob-nota">Se reparte entre los desembolsos sin pagos. También podés editar sus importes individualmente. Total a guardar: <strong>{d.moneda} {num(totalAcuerdo(d.cuotas),2)}</strong>.</p>

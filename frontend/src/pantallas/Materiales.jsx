@@ -4,6 +4,7 @@ import * as api from '../api'
 import Editable from '../componentes/Editable'
 import Aviso from '../componentes/Aviso'
 import { num, numCorto, plata, fecha, porGrupo } from '../formato'
+import { visibles } from '../listas'
 
 /**
  * Materiales y precios. Todo editable.
@@ -162,7 +163,7 @@ export default function Materiales({ obra, alCambiar }) {
             <label><span className="ob-label">Rubro</span>
               <SelectorCategoria tipo="rubros" className="ob-input" style={{ width: '100%' }} value={nuevo.rubro_id}
                 onChange={(e) => setNuevo({ ...nuevo, rubro_id: e.target.value })}>
-                {rubros.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                {visibles(rubros, nuevo.rubro_id).map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
               </SelectorCategoria></label>
             <label><span className="ob-label">Unidad</span>
               <input className="ob-input" required style={{ width: '100%' }} value={nuevo.unidad_consumo}

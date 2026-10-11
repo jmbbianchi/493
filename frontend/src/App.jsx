@@ -17,6 +17,7 @@ import Documentacion from './pantallas/Documentacion'
 import Financiacion from './pantallas/Financiacion'
 import Cotizaciones from './pantallas/Cotizaciones'
 import Rendimientos from './pantallas/Rendimientos'
+import Listas from './pantallas/Listas'
 import ObraNueva from './pantallas/ObraNueva'
 import Aviso from './componentes/Aviso'
 
@@ -76,6 +77,7 @@ export default function App() {
         <Route path="documentacion" element={<ConObra Pantalla={Documentacion} />} />
         <Route path="financiacion" element={<ConObra Pantalla={Financiacion} />} />
         <Route path="cotizaciones" element={<Cotizaciones />} />
+        <Route path="listas" element={<Listas />} />
         {/* Rutas antiguas conservadas temporalmente para no romper enlaces
             guardados, pero ya no forman parte de la navegación principal. */}
         <Route path="pagar" element={<Pagar />} />

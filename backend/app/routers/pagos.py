@@ -268,10 +268,10 @@ def destinos(obra_id: str):
     va a caer casi todo pago -- con el saldo de cada presupuesto ya
     calculado, mas la lista completa de rubros para el pago suelto.
     """
-    rubros = db.query("SELECT id, nombre, orden FROM dbo.rubro ORDER BY orden")
+    rubros = db.query("SELECT id, nombre, orden, activo FROM dbo.rubro ORDER BY orden")
 
     subrubros = db.query(
-        "SELECT id, codigo, nombre, orden FROM dbo.subrubro ORDER BY orden")
+        "SELECT id, codigo, nombre, orden, activo FROM dbo.subrubro ORDER BY orden")
 
     # Cada confirmado admite pagos propios; los borradores no son compromisos.
     presupuestos = db.query(

@@ -15,6 +15,7 @@ import {filtrosVacios,filtrarPagos} from '../filtrosPagos'
 import {importePago,convertirRegistro,resumenRegistro} from '../monedaRegistro'
 import {tasaEn,sumar,tesoreria} from '../tesoreria'
 import '../styles/calendario-pagos.css'
+import { visibles } from '../listas'
 
 /**
  * Registrar Pago: lo que se pagó, y el botón para cargar uno nuevo.
@@ -364,7 +365,7 @@ function Formulario({ obra, destinos, alGuardar }) {
         <SelectorCategoria tipo="rubros" className="ob-input" required value={rubroId}
           onChange={(e) => elegirRubro(e.target.value)}>
           <option value="">Elegí…</option>
-          {rubros.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+          {visibles(rubros, rubroId).map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
         </SelectorCategoria>
       </label>
 
@@ -372,7 +373,7 @@ function Formulario({ obra, destinos, alGuardar }) {
         <SelectorCategoria tipo="subrubros" className="ob-input" value={subrubroId}
           onChange={(e) => elegirSubrubro(e.target.value)}>
           <option value="">Sin especificar</option>
-          {subrubros.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+          {visibles(subrubros, subrubroId).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
         </SelectorCategoria>
       </label>
 
@@ -514,8 +515,8 @@ function EditarPago({ pago, obraId, destinos, alGuardar }) {
     catch (err) { setError(err); setOcupado(false) }
   }}>
     <Aviso error={error} alCerrar={() => setError(null)} />
-    <label className="ob-campo">Rubro<select className="ob-input" required value={datos.rubro_id} onChange={e=>setDatos({...datos,rubro_id:e.target.value,presupuesto_id:'',cuota_id:''})}>{destinos.rubros.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</select></label>
-    <label className="ob-campo">Tipo<select className="ob-input" value={datos.subrubro_id} onChange={e=>setDatos({...datos,subrubro_id:e.target.value,presupuesto_id:'',cuota_id:''})}><option value="">Sin tipo</option>{destinos.subrubros.map(s=><option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label>
+    <label className="ob-campo">Rubro<select className="ob-input" required value={datos.rubro_id} onChange={e=>setDatos({...datos,rubro_id:e.target.value,presupuesto_id:'',cuota_id:''})}>{visibles(destinos.rubros, datos.rubro_id).map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</select></label>
+    <label className="ob-campo">Tipo<select className="ob-input" value={datos.subrubro_id} onChange={e=>setDatos({...datos,subrubro_id:e.target.value,presupuesto_id:'',cuota_id:''})}><option value="">Sin tipo</option>{visibles(destinos.subrubros, datos.subrubro_id).map(s=><option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label>
     <label className="ob-campo">Presupuesto asociado<select className="ob-input" value={datos.presupuesto_id} onChange={e=>setDatos({...datos,presupuesto_id:e.target.value,cuota_id:''})}><option value="">Sin presupuesto previo</option>{presupuestos.map(p=><option key={p.id} value={p.id}>{p.nombre} · {fecha(p.fecha_base)} · {p.moneda} {num(p.nominal,2)}</option>)}</select></label>
     {datos.presupuesto_id && <label className="ob-campo">Cuota o anticipo<select className="ob-input" disabled={cargandoCuotas} {...campo('cuota_id')}><option value="">Sin cuota específica</option>{cuotas.map(c=><option key={c.id} value={c.id}>{c.descripcion} · {fecha(c.fecha_prevista)}</option>)}</select></label>}
     <label className="ob-campo">Fecha de Pago<input className="ob-input" type="date" required {...campo('fecha')} /></label>

@@ -184,6 +184,20 @@ planes de pago viven adentro del rubro.
     cada material. Nunca por tarea: redondear por tarea infla la compra y es
     uno de los errores que tenía la planilla original.
 
+17. **Las listas desplegables se editan, pero no se borran** (11-oct-2026).
+    Las únicas dos listas que son datos y no código son `rubro` y
+    `subrubro`; el resto de los desplegables —moneda, medio de pago,
+    periodicidad, estado— son opciones del motor, y renombrarlos no los
+    haría configurables, los haría mentirosos. Sobre rubro y subrubro se
+    puede renombrar, reordenar y ocultar. No borrar: a un rubro lo apuntan
+    cinco tablas, y borrar uno con un pago colgado no es limpiar la lista,
+    es romper el pago. Un rubro oculto desaparece de los desplegables pero
+    sigue apareciendo en el registro que lo usa, porque si no, abrir ese
+    pago para corregirle el monto le cambiaría el rubro sin que nadie lo
+    pida. El que no usa nadie se renombra y pasa a ser otro: es la forma
+    de aprovechar los que sobran sin perder el historial de los que no.
+    Pantalla `Listas desplegables`, migración 023.
+
 ---
 
 ## 4. Reglas duras — romperlas rompe producción

@@ -272,7 +272,7 @@ def historial_precios(obra_id: str, material_id: int):
 
 @router.get("/rubros")
 def rubros(obra_id: str):
-    return db.query("SELECT id, nombre, orden FROM dbo.rubro ORDER BY orden")
+    return db.query("SELECT id, nombre, orden, activo FROM dbo.rubro ORDER BY orden")
 
 
 class CategoriaNueva(BaseModel):

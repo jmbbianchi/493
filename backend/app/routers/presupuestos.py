@@ -682,7 +682,7 @@ def subrubros(obra_id: str):
     toda la obra". Si cada rubro tuviera los suyos se cotizaria mas fiel
     pero no se podrian sumar transversalmente, que es para lo que existe.
     """
-    return db.query("SELECT id, codigo, nombre, orden FROM dbo.subrubro ORDER BY orden")
+    return db.query("SELECT id, codigo, nombre, orden, activo FROM dbo.subrubro ORDER BY orden")
 
 
 # ─────────────────────────────────────────── cual se usa
