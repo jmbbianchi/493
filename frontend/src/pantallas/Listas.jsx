@@ -22,9 +22,14 @@ const SECCIONES = [
   ['subrubros', 'Tipos', 'El desplegable de Tipo: materiales, mano de obra, equipos.'],
 ]
 
+// Tiene que ser igual al USOS del backend: la pantalla dice «libre» y
+// del otro lado hay un botón de borrar. Si acá faltara uno, diría libre
+// sobre algo que no lo está. El que manda es el backend, que vuelve a
+// comprobarlo adentro del DELETE.
 const USOS = {
   rubros: [['presupuestos', 'presupuesto'], ['pagos', 'pago'],
-    ['materiales', 'material'], ['tareas', 'tarea'], ['documentos', 'documento']],
+    ['materiales', 'material'], ['tareas', 'tarea'], ['documentos', 'documento'],
+    ['proyectos', 'rubro del cronograma']],
   subrubros: [['presupuestos', 'presupuesto'], ['pagos', 'pago'],
     ['computo', 'renglón de cómputo']],
 }
@@ -52,8 +57,8 @@ export default function Listas() {
       </div>
       <p className="ob-nota">
         Las listas son compartidas por todas tus obras: lo que renombres acá
-        se renombra en todas. Nada se borra — lo que ocultes desaparece de los
-        desplegables y sigue intacto en lo que ya cargaste.
+        se renombra en todas. Sólo se puede borrar lo que no usa nadie; lo
+        demás se oculta, y sigue intacto en lo que ya cargaste.
       </p>
       {SECCIONES.map(([clave, titulo, bajada]) => (
         <Seccion key={clave} clave={clave} titulo={titulo} bajada={bajada}
@@ -110,10 +115,10 @@ function Seccion({ clave, titulo, bajada, obra, items, alCambiar }) {
         <table className="ob-table">
           <thead>
             <tr>
-              <th style={{ width: '5rem' }}>Orden</th>
-              <th>Nombre</th>
-              <th>Dónde está usado</th>
-              <th style={{ width: '12rem' }}></th>
+              <th style={{ width: '6rem', whiteSpace: 'nowrap' }}>Orden</th>
+              <th style={{ minWidth: '13rem' }}>Nombre</th>
+              <th style={{ minWidth: '12rem' }}>Dónde está usado</th>
+              <th style={{ width: '16.5rem' }}></th>
             </tr>
           </thead>
           <tbody>
@@ -146,6 +151,15 @@ function Fila({ item, clave, obra, posicion, ultimo, alMover, alCambiar }) {
     catch (e) { setError(e); setOcupado(false) }
   }
 
+  const borrar = async () => {
+    if (!confirm(`Borrar «${item.nombre}» de la lista.\n\n`
+      + 'No lo usa ningún presupuesto, pago, material ni tarea, así que no se '
+      + 'pierde nada cargado. No se puede deshacer: habría que crearlo de nuevo.')) return
+    setOcupado(true); setError(null)
+    try { await api.borrar(`/api/obras/${obra.id}/listas/${clave}/${item.id}`); await alCambiar() }
+    catch (e) { setError(e); setOcupado(false) }
+  }
+
   const renombrar = async () => {
     const limpio = nombre.trim()
     if (!limpio || limpio === item.nombre) { setNombre(null); return }
@@ -160,7 +174,7 @@ function Fila({ item, clave, obra, posicion, ultimo, alMover, alCambiar }) {
 
   return (
     <tr style={visible ? undefined : { opacity: .55 }}>
-      <td>
+      <td style={{ whiteSpace: 'nowrap' }}>
         <button className="ob-btn" style={{ padding: '.05rem .35rem' }} disabled={!posicion}
           aria-label="Subir" onClick={() => alMover(posicion, -1)}>↑</button>
         <button className="ob-btn" style={{ padding: '.05rem .35rem', marginLeft: '.2rem' }}
@@ -191,13 +205,17 @@ function Fila({ item, clave, obra, posicion, ultimo, alMover, alCambiar }) {
           ? <span title="No lo usa nadie: renombralo y pasa a ser otra cosa, sin consecuencias.">libre</span>
           : usos.map(([n, p]) => plural(n, p)).join(' · ')}
       </td>
-      <td>
+      <td style={{ whiteSpace: 'nowrap' }}>
         <button className="ob-btn" style={{ padding: '.05rem .4rem' }} disabled={ocupado}
           onClick={() => setNombre(item.nombre)}>Renombrar</button>
         <button className="ob-btn" style={{ padding: '.05rem .4rem', marginLeft: '.3rem' }}
           disabled={ocupado} onClick={() => guardar({ activo: !visible })}>
           {visible ? 'Ocultar' : 'Mostrar'}
         </button>
+        {/* Borrar aparece sólo en lo que no usa nadie. Mostrarlo gris en
+            todo lo demás sería ofrecer algo que nunca va a andar. */}
+        {total === 0 && <button className="ob-btn" style={{ padding: '.05rem .4rem', marginLeft: '.3rem' }}
+          disabled={ocupado} onClick={borrar}>Borrar</button>}
       </td>
     </tr>
   )

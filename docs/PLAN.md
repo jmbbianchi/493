@@ -196,6 +196,17 @@ planes de pago viven adentro del rubro.
     pago para corregirle el monto le cambiaría el rubro sin que nadie lo
     pida. El que no usa nadie se renombra y pasa a ser otro: es la forma
     de aprovechar los que sobran sin perder el historial de los que no.
+    Y lo que no usa nadie **sí se borra** (11-oct-2026): si no lo apunta
+    ninguna fila, borrarlo no puede romper nada. La condición va adentro
+    del `DELETE` y no en un `SELECT` previo, porque entre mirar y borrar
+    entra un presupuesto cargado desde otra pestaña. El uso se declara una
+    sola vez, en `USOS` de `routers/listas.py`, y de ahí salen las tres
+    cosas: la cuenta que ve el usuario, la condición del borrado y el
+    motivo del rechazo; separadas, alcanzaría con que una quedara corta
+    para que la pantalla diga «libre» sobre algo que no lo está.
+    La lista de tablas salió de `sys.foreign_keys` y no de buscar
+    `rubro_id` en el código: buscando se pasa `proyecto_rubro.rubro_origen_id`,
+    que apunta a rubro con otro nombre de columna.
     Pantalla `Listas desplegables`, migración 023.
 
 ---
